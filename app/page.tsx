@@ -1,9 +1,56 @@
 import Image from "next/image";
+import Header from "./components/Header";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
+    <div className="min-h-screen">
+      <Header />
+      
+      {/* Video Section */}
+      <section className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="rounded-2xl sm:rounded-3xl overflow-hidden bg-gray-100 dark:bg-gray-800">
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="w-full h-auto max-h-[400px] object-cover rounded-2xl sm:rounded-3xl"
+          >
+            <source src="/Welcomevideo.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+        </div>
+      </section>
+
+      {/* Search Section */}
+      <section className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
+        <h2 className="text-2xl font-semibold text-[#17A2B8] dark:text-white mb-4 text-center">
+          Produk apa yang mau dijelasin?
+        </h2>
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="cari produk"
+            className="w-full px-4 py-3 pl-12 text-lg border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+          />
+          <svg
+            className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+        </div>
+      </section>
+
+      {/* <div className="flex min-h-[calc(100vh-4rem-400px)] items-center justify-center font-sans">
+        <main className="flex w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
         <Image
           className="dark:invert"
           src="/next.svg"
@@ -58,8 +105,9 @@ export default function Home() {
           >
             Documentation
           </a>
-        </div>
-      </main>
+        </div> */}
+      {/* </main> */}
+      {/* </div> */}
     </div>
   );
 }
