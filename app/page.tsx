@@ -1,7 +1,32 @@
+"use client";
+
 import Image from "next/image";
 import Header from "./components/Header";
+import { useState } from "react";
+import { dummyProducts, Product } from "./data/dummyProducts";
 
 export default function Home() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResult, setSearchResult] = useState<Product | null>(null);
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    
+    if (value.toLowerCase() === "panadol extra") {
+      const product = dummyProducts.find(p => 
+        p.namaProduk.toLowerCase() === "panadol extra"
+      );
+      setSearchResult(product || null);
+    } else if (value.toLowerCase() === "tolak angin") {
+      const product = dummyProducts.find(p => 
+        p.namaProduk.toLowerCase() === "tolak angin"
+      );
+      setSearchResult(product || null);
+    } else {
+      setSearchResult(null);
+    }
+  };
   return (
     <div className="min-h-screen">
       <Header />
@@ -31,6 +56,8 @@ export default function Home() {
           <input
             type="text"
             placeholder="cari produk"
+            value={searchTerm}
+            onChange={handleSearch}
             className="w-full px-4 py-3 pl-12 text-lg border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white"
           />
           <svg
@@ -48,6 +75,78 @@ export default function Home() {
           </svg>
         </div>
       </section>
+
+      {/* Product Result Section */}
+      {searchResult && (
+        <section className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                {searchResult.namaProduk}
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">Merk:</span>
+                  <p className="text-gray-600 dark:text-gray-400">{searchResult.merk}</p>
+                </div>
+                <div>
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">No. BPOM/Izin Edar:</span>
+                  <p className="text-gray-600 dark:text-gray-400">{searchResult.noBPOM}</p>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Komposisi:</h4>
+                <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
+                  <thead>
+                    <tr className="bg-gray-100 dark:bg-gray-700">
+                      <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-left text-gray-700 dark:text-gray-300">Nama</th>
+                      <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-left text-gray-700 dark:text-gray-300">Fungsi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {searchResult.komposisi.map((item, index) => (
+                      <tr key={index}>
+                        <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-gray-600 dark:text-gray-400">
+                          {item.nama}
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-gray-600 dark:text-gray-400">
+                          {item.fungsi}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-semibold text-green-600 dark:text-green-400 mb-2">Anjuran:</h4>
+                  <ul className="list-disc list-inside space-y-1">
+                    {searchResult.anjuran.map((item, index) => (
+                      <li key={index} className="text-gray-600 dark:text-gray-400 text-sm">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                
+                <div>
+                  <h4 className="font-semibold text-red-600 dark:text-red-400 mb-2">Larangan:</h4>
+                  <ul className="list-disc list-inside space-y-1">
+                    {searchResult.larangan.map((item, index) => (
+                      <li key={index} className="text-gray-600 dark:text-gray-400 text-sm">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* <div className="flex min-h-[calc(100vh-4rem-400px)] items-center justify-center font-sans">
         <main className="flex w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
