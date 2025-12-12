@@ -10,6 +10,48 @@ export interface Product {
   larangan: string[];
 }
 
+export interface ProductCombination {
+  produk1: string;
+  produk2: string;
+  hasil: {
+    status: "aman" | "berisiko";
+    kesimpulan: string;
+    detailAnalisis: string[];
+    anjuranPemakaian: string[];
+    efekSamping: string[];
+  };
+}
+
+export const dummyCombinations: ProductCombination[] = [
+  {
+    produk1: "Skintific Retinol Renewal Serum",
+    produk2: "Some By Mi AHA BHA PHA 30 Days Toner",
+    hasil: {
+      status: "berisiko",
+      kesimpulan: "Kombinasi ini berisiko tinggi dan tidak disarankan digunakan bersamaan, terutama untuk pemula atau kulit sensitif.",
+      detailAnalisis: [
+        "Retinol (Skintific) dan AHA/BHA/PHA (Some By Mi) adalah bahan aktif kuat yang sama-sama bekerja eksfoliasi",
+        "Menggunakan keduanya bersamaan dapat menyebabkan iritasi berlebih, kering, dan sensitif",
+        "Retinol meningkatkan sensitivitas kulit terhadap sinar matahari, AHA/BHA juga membuat kulit lebih rentan",
+        "Kombinasi ini bisa menyebabkan 'retinoid dermatitis' atau iritasi berat"
+      ],
+      anjuranPemakaian: [
+        "Pisahkan pemakaian: pagi gunakan AHA/BHA/PHA, malam gunakan retinol",
+        "Atau gunakan pada hari yang berbeda (selang-seling hari)",
+        "Gunakan sunscreen SPF 30+ minimal dan gunakan moisturizer yang baik",
+        "Mulai dengan konsentrasi rendah dan frekuensi jarang"
+      ],
+      efekSamping: [
+        "Iritasi, kemerahan, dan rasa perih",
+        "Kulit kering dan mengelupas berlebihan",
+        "Sensitif terhadap produk lain",
+        "Peningkatan risiko sunburn",
+        "Breakout atau purging parah"
+      ]
+    }
+  }
+];
+
 export const dummyProducts: Product[] = [
   {
     namaProduk: "PANADOL EXTRA",

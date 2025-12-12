@@ -57,7 +57,7 @@ export default function Header() {
           <nav className="hidden lg:flex space-x-4">
             <Link
               href={isPadukanPage ? "/" : "/padukanproduk"}
-              className="px-4 py-2 text-sm font-medium text-[#6D28D9] dark:text-gray-300 bg-[#00BCD4] dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-[#6D28D9] dark:text-gray-300 bg-[#45D2E8] dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               {isPadukanPage ? "Cek Komposisi" : "Padukan Produk"}
             </Link>
