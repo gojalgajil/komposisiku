@@ -2,29 +2,69 @@
 
 import Image from "next/image";
 import Header from "./components/Header";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { dummyProducts, Product } from "./data/dummyProducts";
+import { getProductRecommendations, getProductDetails, ProductRecommendation } from "./lib/gemini";
 
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResult, setSearchResult] = useState<Product | null>(null);
+  const [recommendations, setRecommendations] = useState<ProductRecommendation[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showRecommendations, setShowRecommendations] = useState(false);
+
+  // Debounce function to prevent multiple rapid API calls
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchTerm.trim() === "") {
+        setRecommendations([]);
+        setShowRecommendations(false);
+        setSearchResult(null);
+        return;
+      }
+
+      // Get recommendations for autocomplete (debounced)
+      if (searchTerm.length >= 2) {
+        fetchRecommendations(searchTerm);
+      }
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm]);
+
+  const fetchRecommendations = async (value: string) => {
+    setIsLoading(true);
+    try {
+      const recs = await getProductRecommendations(value);
+      setRecommendations(recs);
+      setShowRecommendations(true);
+    } catch (error) {
+      console.error("Error getting recommendations:", error);
+      setRecommendations([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
+  };
+
+  const handleProductSelect = async (productName: string) => {
+    setSearchTerm(productName);
+    setShowRecommendations(false);
     
-    if (value.toLowerCase() === "panadol extra") {
-      const product = dummyProducts.find(p => 
-        p.namaProduk.toLowerCase() === "panadol extra"
-      );
-      setSearchResult(product || null);
-    } else if (value.toLowerCase() === "tolak angin") {
-      const product = dummyProducts.find(p => 
-        p.namaProduk.toLowerCase() === "tolak angin"
-      );
-      setSearchResult(product || null);
-    } else {
-      setSearchResult(null);
+    setIsLoading(true);
+    try {
+      const productDetails = await getProductDetails(productName);
+      if (productDetails) {
+        setSearchResult(productDetails);
+      }
+    } catch (error) {
+      console.error("Error getting product details:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
   return (
@@ -58,6 +98,7 @@ export default function Home() {
             placeholder="cari produk"
             value={searchTerm}
             onChange={handleSearch}
+            onFocus={() => searchTerm.length >= 2 && setShowRecommendations(true)}
             className="w-full px-4 py-3 pl-12 text-lg border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white"
           />
           <svg
@@ -73,6 +114,29 @@ export default function Home() {
               d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
             />
           </svg>
+          
+          {/* Recommendations Dropdown */}
+          {showRecommendations && recommendations.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+              {isLoading ? (
+                <div className="px-4 py-3 text-gray-500 dark:text-gray-400">
+                  Mencari produk...
+                </div>
+              ) : (
+                recommendations.map((rec, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleProductSelect(rec.name)}
+                    className="w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600 last:border-b-0 transition-colors"
+                  >
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      {rec.name}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
         </div>
       </section>
 
@@ -143,9 +207,40 @@ export default function Home() {
                   </ul>
                 </div>
               </div>
+              
+              {/* Sources Section */}
+              {searchResult.sources && searchResult.sources.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-600">
+                  <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Sumber:</h4>
+                  <ul className="list-disc list-inside space-y-1">
+                    {searchResult.sources.map((source, index) => (
+                      <li key={index} className="text-gray-600 dark:text-gray-400 text-sm">
+                        <a 
+                          href={source} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          {source}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
         </section>
+      )}
+      
+      {/* Loading Indicator */}
+      {isLoading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 flex items-center space-x-3">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <span className="text-gray-900 dark:text-white">Memuat data produk...</span>
+          </div>
+        </div>
       )}
 
       {/* <div className="flex min-h-[calc(100vh-4rem-400px)] items-center justify-center font-sans">

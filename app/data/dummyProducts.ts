@@ -8,6 +8,7 @@ export interface Product {
   }[];
   anjuran: string[];
   larangan: string[];
+  sources?: string[];
 }
 
 export interface ProductCombination {
