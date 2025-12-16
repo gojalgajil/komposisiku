@@ -27,12 +27,13 @@ export async function getProductRecommendations(searchTerm: string): Promise<Pro
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('API Error Details:', {
-        status: response.status,
-        statusText: response.statusText,
-        body: errorText
-      });
+      // Commented out to reduce console spam
+      // const errorText = await response.text();
+      // console.error('API Error Details:', {
+      //   status: response.status,
+      //   statusText: response.statusText,
+      //   body: errorText
+      // });
       throw new Error(`Failed to get recommendations: ${response.status} ${response.statusText}`);
     }
 
@@ -55,12 +56,13 @@ export async function getProductDetails(productName: string): Promise<ProductDet
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Product Details API Error:', {
-        status: response.status,
-        statusText: response.statusText,
-        body: errorText
-      });
+      // Commented out to reduce console spam
+      // const errorText = await response.text();
+      // console.error('Product Details API Error:', {
+      //   status: response.status,
+      //   statusText: response.statusText,
+      //   body: errorText
+      // });
       throw new Error(`Failed to get product details: ${response.status} ${response.statusText}`);
     }
 

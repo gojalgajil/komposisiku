@@ -49,11 +49,18 @@ export default function Home() {
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
+    // Clear product details when user starts typing again
+    if (value.trim() === "") {
+      setSearchResult(null);
+      setRecommendations([]);
+      setShowRecommendations(false);
+    }
   };
 
   const handleProductSelect = async (productName: string) => {
-    setSearchTerm(productName);
+    setSearchTerm(""); // Clear search input
     setShowRecommendations(false);
+    setRecommendations([]); // Clear recommendations when product is selected
     
     setIsLoading(true);
     try {

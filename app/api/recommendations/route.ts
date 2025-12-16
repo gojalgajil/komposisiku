@@ -1,46 +1,67 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
 import Groq from 'groq-sdk';
-
-// Debug log environment variables
-console.log('Environment variables:', {
-  hasGoogleApiKey: !!process.env.GOOGLE_AI_API_KEY,
-  hasGroqApiKey: !!process.env.GROQ_API_KEY,
-  googleKeyLength: process.env.GOOGLE_AI_API_KEY?.length,
-  groqKeyLength: process.env.GROQ_API_KEY?.length,
-  nodeEnv: process.env.NODE_ENV,
-  allEnvKeys: Object.keys(process.env).filter(key => key.includes('GOOGLE') || key.includes('GROQ') || key.includes('NEXT_'))
-});
-
-// Check if API key is present (don't throw during initialization)
-if (!process.env.GOOGLE_AI_API_KEY) {
-  console.warn('GOOGLE_AI_API_KEY is not set in environment variables');
-}
-
-// Initialize the Google AI client only if API key is present
-let ai: GoogleGenAI | null = null;
-if (process.env.GOOGLE_AI_API_KEY) {
-  ai = new GoogleGenAI({
-    apiKey: process.env.GOOGLE_AI_API_KEY
-  });
-}
+import axios from 'axios';
+import * as cheerio from 'cheerio';
 
 // Initialize Groq client
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY || ''
 });
 
-// Test the API key by creating a simple model instance
-try {
-  console.log('Initializing Google AI client...');
-  console.log('API Key present:', !!process.env.GOOGLE_AI_API_KEY);
-  
-  // Just verify the client was created successfully
-  console.log('Google AI client initialized successfully');
-} catch (error: any) {
-  console.error('Failed to initialize Google AI client:', error);
-  console.error('Error details:', error?.message || 'Unknown error');
-  // Don't throw here, let the POST function handle initialization errors
+// Web scraping function for real product recommendations
+async function scrapeRealProducts(searchTerm: string) {
+  try {
+    console.log("Attempting to scrape incidecoder.com for:", searchTerm);
+    const response = await axios.get(`https://incidecoder.com/search?q=${encodeURIComponent(searchTerm)}`, {
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    const $ = cheerio.load(response.data);
+    const results: Array<{name: string}> = [];
+    
+    // Try multiple selectors for product names
+    $('.search-result-item .product-name, .product-item .name, .search-item .title').each((i, element) => {
+      const productName = $(element).text().trim();
+      if (productName && results.length < 5) {
+        results.push({ name: productName });
+      }
+    });
+    
+    console.log("Found products from incidecoder:", results);
+    return results;
+  } catch (error) {
+    console.error('Incidecoder scraping error:', error);
+    
+    // Try BPOM as fallback
+    try {
+      console.log("Attempting to scrape BPOM as fallback for:", searchTerm);
+      const bpomResponse = await axios.get(`https://cekbpom.pom.go.id/search?name=${encodeURIComponent(searchTerm)}`, {
+        timeout: 8000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      });
+      
+      const $bpom = cheerio.load(bpomResponse.data);
+      const results: Array<{name: string}> = [];
+      
+      $bpom('.product-item .product-name, .result-item .name').each((i, element) => {
+        const productName = $bpom(element).text().trim();
+        if (productName && results.length < 5) {
+          results.push({ name: productName });
+        }
+      });
+      
+      console.log("Found products from BPOM:", results);
+      return results;
+    } catch (bpomError) {
+      console.error('BPOM scraping error:', bpomError);
+      return [];
+    }
+  }
 }
 
 export interface ProductRecommendation {
@@ -58,75 +79,65 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'searchTerm is required' }, { status: 400 });
     }
 
-    // Simple test: Only use Groq, no Google AI
-    if (!process.env.GROQ_API_KEY) {
-      return NextResponse.json({ error: 'Groq API key not configured' }, { status: 500 });
+    console.log("Scraping real products for:", searchTerm);
+    
+    // Scrape real products from incidecoder.com and BPOM
+    const realProducts = await scrapeRealProducts(searchTerm);
+    
+    if (realProducts.length > 0) {
+      console.log("Found real products:", realProducts);
+      return NextResponse.json(realProducts);
     }
-
-    console.log("Using Groq API...");
     
-    const groqResponse = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
-      messages: [
-        {
-          role: "user",
-          content: `Return ONLY a JSON array with 5 Indonesian product recommendations for "${searchTerm}". 
-
-Example:
-[{"name": "Madu TJ"}, {"name": "Madu Nusantara"}, {"name": "Madu Kurma"}, {"name": "Madu Super"}, {"name": "Madu Kelapa"}]
-
-IMPORTANT: 
-- Return ONLY the JSON array, no other text
-- Products must exist in Indonesian market
-- Use exact format: [{"name": "product name"}]`
-        }
-      ],
-      response_format: { type: "text" }
-    });
-    
-    const groqText = groqResponse.choices[0]?.message?.content;
-    console.log("Groq response:", groqText);
-    
-    if (!groqText) {
-      return NextResponse.json({ error: 'No response from Groq' }, { status: 500 });
-    }
+    // If no real products found, use Groq for fallback but with strict real product constraint
+    console.log("No real products found, using Groq fallback...");
     
     try {
-      const groqData = JSON.parse(groqText);
-      console.log("Parsed Groq data:", groqData);
-      
-      // Handle different response formats
-      let recommendations = [];
-      if (Array.isArray(groqData)) {
-        recommendations = groqData;
-      } else if (groqData.recommendations && Array.isArray(groqData.recommendations)) {
-        recommendations = groqData.recommendations;
-      } else if (groqData.products && Array.isArray(groqData.products)) {
-        recommendations = groqData.products;
-      } else if (groqData.items && Array.isArray(groqData.items)) {
-        recommendations = groqData.items;
-      } else {
-        // Try to find any array in the response
-        for (const key in groqData) {
-          if (Array.isArray(groqData[key])) {
-            recommendations = groqData[key];
-            break;
+      const groqResponse = await groq.chat.completions.create({
+        model: "llama-3.1-8b-instant",
+        messages: [
+          {
+            role: "user",
+            content: `Return ONLY a JSON array with 5 REAL Indonesian products that actually exist for "${searchTerm}". 
+
+CRITICAL: Only products that are actually sold in Indonesia. NO fake products.
+Examples for "Tolak Angin": ["Tolak Angin", "Tolak Angin Flu", "Tolak Angin Batuk", "Tolak Angin Madu", "Tolak Angin Sirih"]
+Examples for "Madu": ["Madu TJ", "Madu Nusantara", "Madu Kurma", "Madu Super", "Madu Kelapa"]
+
+Format: [{"name": "Real Product Name 1"}, {"name": "Real Product Name 2"}, {"name": "Real Product Name 3"}, {"name": "Real Product Name 4"}, {"name": "Real Product Name 5"}]
+
+IMPORTANT: Only existing Indonesian products, no variations that don't exist! Return ONLY the JSON array, no other text.`
           }
-        }
+        ],
+        response_format: { type: "text" }
+      });
+      
+      const groqText = groqResponse.choices[0]?.message?.content;
+      console.log("Groq response:", groqText);
+      
+      if (!groqText) {
+        console.log("No response from Groq, returning empty array");
+        return NextResponse.json([]);
       }
       
-      if (recommendations.length > 0) {
-        console.log("Groq successful, returning:", recommendations);
-        return NextResponse.json(recommendations);
-      } else {
-        console.log("No recommendations found in response. Available keys:", Object.keys(groqData));
-        console.log("Full response structure:", JSON.stringify(groqData, null, 2));
-        return NextResponse.json({ error: 'No recommendations found' }, { status: 500 });
+      try {
+        const groqData = JSON.parse(groqText);
+        console.log("Parsed Groq data:", groqData);
+        
+        if (Array.isArray(groqData) && groqData.length > 0) {
+          return NextResponse.json(groqData);
+        } else {
+          console.log("Invalid Groq response format, returning empty array");
+          return NextResponse.json([]);
+        }
+      } catch (parseError) {
+        console.error("Failed to parse Groq response:", parseError);
+        console.error("Raw response:", groqText);
+        return NextResponse.json([]);
       }
-    } catch (parseError) {
-      console.error("Failed to parse Groq response:", parseError);
-      console.error("Raw response:", groqText);
-      return NextResponse.json({ error: 'Failed to parse response' }, { status: 500 });
+    } catch (groqError) {
+      console.error("Groq API error:", groqError);
+      return NextResponse.json([]);
     }
     
   } catch (error) {
