@@ -5,6 +5,7 @@ import Header from "./components/Header";
 import { useState, useRef, useEffect } from "react";
 import { getProductDetails, analyzeProductImage } from "./lib/gemini";
 import { Product } from "./types/product";
+import { toPng } from 'html-to-image';
 
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -153,10 +154,454 @@ export default function Home() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
-    
+
     // Clear product details when user starts typing again
     if (value.trim() === "") {
       setSearchResult(null);
+    }
+  };
+
+  const exportToPNG = async () => {
+    // Ensure content is loaded
+    if (!searchResult) {
+      console.error('No search result to export');
+      return;
+    }
+
+    try {
+      // Create temporary div for export (like in previous project)
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'fixed';
+      tempDiv.style.top = '10px';
+      tempDiv.style.left = '10px';
+      tempDiv.style.width = '800px';
+      tempDiv.style.minHeight = '1200px';
+      tempDiv.style.padding = '40px';
+      tempDiv.style.backgroundColor = 'white';
+      tempDiv.style.color = 'black';
+      tempDiv.style.zIndex = '9999';
+      tempDiv.style.visibility = 'hidden';
+      tempDiv.style.boxSizing = 'border-box';
+      tempDiv.style.borderRadius = '16px';
+      tempDiv.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.1)';
+      tempDiv.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+
+      // Generate composition table HTML
+      const compositionRows = searchResult.komposisi.map(item => `
+        <tr style="border-bottom: 1px solid #e5e7eb;">
+          <td style="padding: 12px 16px; font-weight: 500; color: #111827;">${item.nama}</td>
+          <td style="padding: 12px 16px; color: #6b7280;">${item.fungsi}</td>
+        </tr>
+      `).join('');
+
+      // Generate recommendations HTML
+      const anjuranItems = searchResult.anjuran.map(item => `
+        <li style="display: flex; align-items: flex-start; margin-bottom: 8px;">
+          <span style="width: 6px; height: 6px; background-color: #10b981; border-radius: 50%; margin-top: 6px; margin-right: 12px; flex-shrink: 0;"></span>
+          <span style="color: #065f46; font-size: 14px;">${item}</span>
+        </li>
+      `).join('');
+
+      // Generate warnings HTML
+      const laranganItems = searchResult.larangan.map(item => `
+        <li style="display: flex; align-items: flex-start; margin-bottom: 8px;">
+          <span style="width: 6px; height: 6px; background-color: #ef4444; border-radius: 50%; margin-top: 6px; margin-right: 12px; flex-shrink: 0;"></span>
+          <span style="color: #991b1b; font-size: 14px;">${item}</span>
+        </li>
+      `).join('');
+
+      // Generate sources HTML (if available)
+      const sourcesHtml = searchResult.sources && searchResult.sources.length > 0 ?
+        `<div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+          <div style="display: flex; align-items: center; margin-bottom: 16px;">
+            <svg style="width: 20px; height: 20px; color: #8b5cf6; margin-right: 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+            </svg>
+            <h4 style="font-size: 16px; font-weight: 600; color: #111827;">Sumber Referensi</h4>
+          </div>
+          <div style="display: grid; gap: 8px;">
+            ${searchResult.sources.map(source => `
+              <a href="${source}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; padding: 12px; background: linear-gradient(90deg, #f3f4f6 0%, #e0e7ff 100%); border-radius: 8px; text-decoration: none; transition: all 0.2s;">
+                <svg style="width: 14px; height: 14px; color: #6366f1; margin-right: 8px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                </svg>
+                <span style="color: #4338ca; font-size: 12px; word-break: break-all;">${source}</span>
+              </a>
+            `).join('')}
+          </div>
+        </div>` : '';
+
+      // Create content with simple inline styles
+      const contentDiv = document.createElement('div');
+      contentDiv.style.width = '600px';
+      contentDiv.style.padding = '32px';
+      contentDiv.style.backgroundColor = 'white';
+      contentDiv.style.color = 'black';
+      contentDiv.style.fontFamily = 'Arial, sans-serif';
+      contentDiv.style.lineHeight = '1.5';
+
+      // Header
+      const headerDiv = document.createElement('div');
+      headerDiv.style.textAlign = 'center';
+      headerDiv.style.marginBottom = '32px';
+
+      const titleH3 = document.createElement('h3');
+      titleH3.style.fontSize = '28px';
+      titleH3.style.fontWeight = '700';
+      titleH3.style.color = '#111827';
+      titleH3.style.marginBottom = '16px';
+      titleH3.textContent = searchResult.namaProduk.toUpperCase();
+
+      const lineDiv = document.createElement('div');
+      lineDiv.style.width = '80px';
+      lineDiv.style.height = '3px';
+      lineDiv.style.backgroundColor = '#17a2b8';
+      lineDiv.style.margin = '0 auto';
+      lineDiv.style.borderRadius = '2px';
+
+      headerDiv.appendChild(titleH3);
+      headerDiv.appendChild(lineDiv);
+
+      // Composition section
+      const compositionDiv = document.createElement('div');
+      compositionDiv.style.marginBottom = '32px';
+
+      const compTitleDiv = document.createElement('div');
+      compTitleDiv.style.display = 'flex';
+      compTitleDiv.style.alignItems = 'center';
+      compTitleDiv.style.marginBottom = '16px';
+
+      const compTitle = document.createElement('h4');
+      compTitle.style.fontSize = '18px';
+      compTitle.style.fontWeight = '600';
+      compTitle.style.color = '#111827';
+      compTitle.textContent = 'Komposisi';
+
+      compTitleDiv.appendChild(compTitle);
+      compositionDiv.appendChild(compTitleDiv);
+
+      // Create table
+      const table = document.createElement('table');
+      table.style.width = '100%';
+      table.style.borderCollapse = 'collapse';
+      table.style.backgroundColor = 'white';
+      table.style.border = '1px solid #d1d5db';
+      table.style.borderRadius = '12px';
+      table.style.overflow = 'hidden';
+
+      // Table header
+      const thead = document.createElement('thead');
+      thead.style.backgroundColor = '#17a2b8';
+
+      const headerRow = document.createElement('tr');
+      const th1 = document.createElement('th');
+      th1.style.padding = '16px';
+      th1.style.textAlign = 'left';
+      th1.style.color = 'white';
+      th1.style.fontWeight = '600';
+      th1.style.fontSize = '14px';
+      th1.textContent = 'Bahan';
+
+      const th2 = document.createElement('th');
+      th2.style.padding = '16px';
+      th2.style.textAlign = 'left';
+      th2.style.color = 'white';
+      th2.style.fontWeight = '600';
+      th2.style.fontSize = '14px';
+      th2.textContent = 'Fungsi';
+
+      headerRow.appendChild(th1);
+      headerRow.appendChild(th2);
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      // Table body
+      const tbody = document.createElement('tbody');
+      searchResult.komposisi.forEach(item => {
+        const row = document.createElement('tr');
+        row.style.borderBottom = '1px solid #e5e7eb';
+
+        const td1 = document.createElement('td');
+        td1.style.padding = '12px 16px';
+        td1.style.fontWeight = '500';
+        td1.style.color = '#111827';
+        td1.textContent = item.nama;
+
+        const td2 = document.createElement('td');
+        td2.style.padding = '12px 16px';
+        td2.style.color = '#6b7280';
+        td2.textContent = item.fungsi;
+
+        row.appendChild(td1);
+        row.appendChild(td2);
+        tbody.appendChild(row);
+      });
+      table.appendChild(tbody);
+
+      compositionDiv.appendChild(table);
+
+      // Recommendations and Warnings section
+      const recWarnDiv = document.createElement('div');
+      recWarnDiv.style.display = 'grid';
+      recWarnDiv.style.gridTemplateColumns = '1fr 1fr';
+      recWarnDiv.style.gap = '24px';
+      recWarnDiv.style.marginBottom = '32px';
+
+      // Anjuran (Recommendations) section
+      const anjuranDiv = document.createElement('div');
+      anjuranDiv.style.background = 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)';
+      anjuranDiv.style.padding = '20px';
+      anjuranDiv.style.borderRadius = '12px';
+      anjuranDiv.style.border = '1px solid #bbf7d0';
+
+      const anjuranHeader = document.createElement('div');
+      anjuranHeader.style.display = 'flex';
+      anjuranHeader.style.alignItems = 'center';
+      anjuranHeader.style.marginBottom = '16px';
+
+      const anjuranIcon = document.createElement('div');
+      anjuranIcon.innerHTML = '<svg style="width: 20px; height: 20px; color: #16a34a;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+      anjuranIcon.style.marginRight = '8px';
+
+      const anjuranTitle = document.createElement('h4');
+      anjuranTitle.style.fontSize = '16px';
+      anjuranTitle.style.fontWeight = '600';
+      anjuranTitle.style.color = '#166534';
+      anjuranTitle.textContent = 'Anjuran';
+
+      anjuranHeader.appendChild(anjuranIcon);
+      anjuranHeader.appendChild(anjuranTitle);
+
+      const anjuranList = document.createElement('ul');
+      anjuranList.style.listStyle = 'none';
+      anjuranList.style.padding = '0';
+      anjuranList.style.margin = '0';
+
+      searchResult.anjuran.forEach(item => {
+        const li = document.createElement('li');
+        li.style.display = 'flex';
+        li.style.alignItems = 'flex-start';
+        li.style.marginBottom = '8px';
+
+        const bullet = document.createElement('span');
+        bullet.style.width = '6px';
+        bullet.style.height = '6px';
+        bullet.style.backgroundColor = '#10b981';
+        bullet.style.borderRadius = '50%';
+        bullet.style.marginTop = '6px';
+        bullet.style.marginRight = '12px';
+        bullet.style.flexShrink = '0';
+
+        const text = document.createElement('span');
+        text.style.color = '#065f46';
+        text.style.fontSize = '14px';
+        text.textContent = item;
+
+        li.appendChild(bullet);
+        li.appendChild(text);
+        anjuranList.appendChild(li);
+      });
+
+      anjuranDiv.appendChild(anjuranHeader);
+      anjuranDiv.appendChild(anjuranList);
+
+      // Larangan (Warnings) section
+      const laranganDiv = document.createElement('div');
+      laranganDiv.style.background = 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)';
+      laranganDiv.style.padding = '20px';
+      laranganDiv.style.borderRadius = '12px';
+      laranganDiv.style.border = '1px solid #fecaca';
+
+      const laranganHeader = document.createElement('div');
+      laranganHeader.style.display = 'flex';
+      laranganHeader.style.alignItems = 'center';
+      laranganHeader.style.marginBottom = '16px';
+
+      const laranganIcon = document.createElement('div');
+      laranganIcon.innerHTML = '<svg style="width: 20px; height: 20px; color: #dc2626;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path></svg>';
+      laranganIcon.style.marginRight = '8px';
+
+      const laranganTitle = document.createElement('h4');
+      laranganTitle.style.fontSize = '16px';
+      laranganTitle.style.fontWeight = '600';
+      laranganTitle.style.color = '#991b1b';
+      laranganTitle.textContent = 'Larangan';
+
+      laranganHeader.appendChild(laranganIcon);
+      laranganHeader.appendChild(laranganTitle);
+
+      const laranganList = document.createElement('ul');
+      laranganList.style.listStyle = 'none';
+      laranganList.style.padding = '0';
+      laranganList.style.margin = '0';
+
+      searchResult.larangan.forEach(item => {
+        const li = document.createElement('li');
+        li.style.display = 'flex';
+        li.style.alignItems = 'flex-start';
+        li.style.marginBottom = '8px';
+
+        const bullet = document.createElement('span');
+        bullet.style.width = '6px';
+        bullet.style.height = '6px';
+        bullet.style.backgroundColor = '#ef4444';
+        bullet.style.borderRadius = '50%';
+        bullet.style.marginTop = '6px';
+        bullet.style.marginRight = '12px';
+        bullet.style.flexShrink = '0';
+
+        const text = document.createElement('span');
+        text.style.color = '#991b1b';
+        text.style.fontSize = '14px';
+        text.textContent = item;
+
+        li.appendChild(bullet);
+        li.appendChild(text);
+        laranganList.appendChild(li);
+      });
+
+      laranganDiv.appendChild(laranganHeader);
+      laranganDiv.appendChild(laranganList);
+
+      recWarnDiv.appendChild(anjuranDiv);
+      recWarnDiv.appendChild(laranganDiv);
+
+      // Add everything to content div
+      contentDiv.appendChild(headerDiv);
+      contentDiv.appendChild(compositionDiv);
+      contentDiv.appendChild(recWarnDiv);
+
+      // Sources section (if available)
+      if (searchResult.sources && searchResult.sources.length > 0) {
+        const sourcesDiv = document.createElement('div');
+        sourcesDiv.style.marginTop = '24px';
+        sourcesDiv.style.paddingTop = '24px';
+        sourcesDiv.style.borderTop = '1px solid #e5e7eb';
+
+        const sourcesHeader = document.createElement('div');
+        sourcesHeader.style.display = 'flex';
+        sourcesHeader.style.alignItems = 'center';
+        sourcesHeader.style.marginBottom = '16px';
+
+        const sourcesIcon = document.createElement('div');
+        sourcesIcon.innerHTML = '<svg style="width: 20px; height: 20px; color: #8b5cf6;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>';
+        sourcesIcon.style.marginRight = '8px';
+
+        const sourcesTitle = document.createElement('h4');
+        sourcesTitle.style.fontSize = '16px';
+        sourcesTitle.style.fontWeight = '600';
+        sourcesTitle.style.color = '#111827';
+        sourcesTitle.textContent = 'Sumber Referensi';
+
+        sourcesHeader.appendChild(sourcesIcon);
+        sourcesHeader.appendChild(sourcesTitle);
+
+        const sourcesList = document.createElement('div');
+        sourcesList.style.display = 'grid';
+        sourcesList.style.gap = '8px';
+
+        searchResult.sources.forEach(source => {
+          const sourceDiv = document.createElement('div');
+          sourceDiv.style.display = 'flex';
+          sourceDiv.style.alignItems = 'center';
+          sourceDiv.style.padding = '12px';
+          sourceDiv.style.background = 'linear-gradient(90deg, #f3f4f6 0%, #e0e7ff 100%)';
+          sourceDiv.style.borderRadius = '8px';
+
+          const sourceIcon = document.createElement('div');
+          sourceIcon.innerHTML = '<svg style="width: 14px; height: 14px; color: #6366f1;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>';
+          sourceIcon.style.marginRight = '8px';
+          sourceIcon.style.flexShrink = '0';
+
+          const sourceText = document.createElement('span');
+          sourceText.style.color = '#4338ca';
+          sourceText.style.fontSize = '12px';
+          sourceText.style.wordBreak = 'break-all';
+          sourceText.textContent = source;
+
+          sourceDiv.appendChild(sourceIcon);
+          sourceDiv.appendChild(sourceText);
+          sourcesList.appendChild(sourceDiv);
+        });
+
+        sourcesDiv.appendChild(sourcesHeader);
+        sourcesDiv.appendChild(sourcesList);
+        contentDiv.appendChild(sourcesDiv);
+      }
+
+      // Simple footer
+      const footerDiv = document.createElement('div');
+      footerDiv.style.marginTop = '32px';
+      footerDiv.style.paddingTop = '24px';
+      footerDiv.style.borderTop = '1px solid #e5e7eb';
+      footerDiv.style.textAlign = 'center';
+      footerDiv.style.color = '#9ca3af';
+      footerDiv.style.fontSize = '10px';
+      footerDiv.innerHTML = `
+        <div>Dibuat pada ${new Date().toLocaleDateString('id-ID', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })}</div>
+        <div style="margin-top: 4px;">by KOMPOSISIKU</div>
+      `;
+
+      contentDiv.appendChild(footerDiv);
+
+      tempDiv.appendChild(contentDiv);
+
+      document.body.appendChild(tempDiv);
+
+      try {
+        tempDiv.style.visibility = 'visible';
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const dataUrl = await toPng(tempDiv, {
+          backgroundColor: '#ffffff',
+          quality: 1,
+          cacheBust: true,
+          pixelRatio: 4,
+          width: tempDiv.offsetWidth,
+          height: tempDiv.offsetHeight
+        });
+
+        if (navigator.share) {
+          try {
+            const response = await fetch(dataUrl);
+            const blob = await response.blob();
+            const file = new File([blob], `${searchResult.namaProduk}-details.png`, { type: 'image/png' });
+
+            await navigator.share({
+              files: [file],
+              title: `Informasi Produk: ${searchResult.namaProduk}`,
+              text: `Detail komposisi dan informasi produk: ${searchResult.namaProduk}`,
+            });
+            return;
+          } catch (shareError) {
+            console.log('Native sharing failed, falling back to download', shareError);
+          }
+        }
+
+        const link = document.createElement('a');
+        link.download = `${searchResult.namaProduk}-details.png`;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+      } catch (error) {
+        console.error('Error generating image:', error);
+        alert('Failed to generate image. Please try again.');
+      } finally {
+        if (document.body.contains(tempDiv)) {
+          document.body.removeChild(tempDiv);
+        }
+      }
+    } catch (error) {
+      console.error('Error exporting to PNG:', error);
+      alert('Maaf, terjadi kesalahan saat mengexport gambar. Silakan coba lagi atau gunakan screenshot manual.');
     }
   };
   return (
@@ -328,18 +773,32 @@ export default function Home() {
 
       {/* Product Result Section */}
       {searchResult && (
-        <section ref={productDetailsRef} className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-          <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900 rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+        <section className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+          <div ref={productDetailsRef} className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
             <div className="p-8">
               {/* Product Header */}
               <div className="text-center mb-8">
-                <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                  {searchResult.namaProduk}
+                <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+                  {searchResult.namaProduk.toUpperCase()}
                 </h3>
                 <div className="w-24 h-1 bg-gradient-to-r from-[#17A2B8] to-[#9370DB] mx-auto rounded-full"></div>
               </div>
 
 
+
+              {/* Export Button */}
+              <div className="flex justify-start mb-4">
+                <button
+                  onClick={exportToPNG}
+                  className="flex items-center px-4 py-2 bg-[#17A2B8] hover:bg-[#45D2E8] text-white text-sm rounded-md transition-colors duration-200 shadow-sm hover:shadow-md"
+                  title="Export sebagai PNG"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Export PNG
+                </button>
+              </div>
 
               {/* Composition Section */}
               <div className="mb-8">

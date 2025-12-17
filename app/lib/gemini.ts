@@ -68,6 +68,9 @@ export async function getProductDetails(productName: string): Promise<ProductDet
       if (response.status === 429) {
         throw new Error('Token Gemini Habis');
       }
+      if (response.status === 503) {
+        throw new Error('Gemini lagi capek');
+      }
       throw new Error(`Failed to get product details: ${response.status} ${response.statusText}`);
     }
 
