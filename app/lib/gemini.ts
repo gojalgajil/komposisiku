@@ -15,7 +15,7 @@ export interface ProductDetails {
   sources: string[];
 }
 
-// Product Recommendations using Gemini AI with Google Search
+// Product Recommendations using Groq AI with Google Search
 export async function getProductRecommendations(searchTerm: string): Promise<ProductRecommendation[]> {
   try {
     const response = await fetch('/api/recommendations', {
@@ -27,17 +27,28 @@ export async function getProductRecommendations(searchTerm: string): Promise<Pro
     });
 
     if (!response.ok) {
-      // Commented out to reduce console spam
-      // const errorText = await response.text();
-      // console.error('API Error Details:', {
-      //   status: response.status,
-      //   statusText: response.statusText,
-      //   body: errorText
-      // });
       throw new Error(`Failed to get recommendations: ${response.status} ${response.statusText}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    
+    // Handle the new response format: {products: [{namaProduk, merk, ...}]}
+    if (data && data.products && Array.isArray(data.products)) {
+      return data.products.map((product: any) => ({
+        name: product.namaProduk || product.name || ''
+      }));
+    }
+    
+    // Handle old format or simple array
+    if (Array.isArray(data)) {
+      return data.map((item: any) => ({
+        name: item.namaProduk || item.name || ''
+      }));
+    }
+    
+    // Fallback: return empty array
+    console.log("Unexpected response format:", data);
+    return [];
   } catch (error) {
     console.error("Error getting product recommendations:", error);
     return [];

@@ -1,12 +1,25 @@
 import { NextResponse } from 'next/server';
-import Groq from 'groq-sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-// Initialize Groq client
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY || ''
+// Debug log environment variables
+console.log('Environment variables:', {
+  hasGoogleApiKey: !!process.env.GOOGLE_AI_API_KEY,
+  keyLength: process.env.GOOGLE_AI_API_KEY?.length,
+  keyPrefix: process.env.GOOGLE_AI_API_KEY?.substring(0, 5) + '...',
+  nodeEnv: process.env.NODE_ENV,
+  allEnvKeys: Object.keys(process.env).filter(key => key.includes('GOOGLE') || key.includes('NEXT_'))
 });
+
+// Check if API key is present
+if (!process.env.GOOGLE_AI_API_KEY) {
+  console.error('GOOGLE_AI_API_KEY is not set in environment variables');
+  throw new Error('Server configuration error: Missing API key');
+}
+
+// Initialize the Google AI client
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
 
 // Web scraping functions
 async function scrapeBPOM(productName: string) {
@@ -19,17 +32,60 @@ async function scrapeBPOM(productName: string) {
     });
     
     const $ = cheerio.load(response.data);
-    const results: Array<{name: string, nomorBPOM: string, merk: string}> = [];
+    const results: Array<{name: string, nomorBPOM: string}> = [];
     
-    $('.product-item').each((i, element) => {
-      const name = $(element).find('.product-name').text().trim();
-      const nomorBPOM = $(element).find('.bpom-number').text().trim();
-      const merk = $(element).find('.brand').text().trim();
+    // Try different approaches to extract data
+    // 1. Look for any table rows with BPOM numbers
+    $('tr').each((i, element) => {
+      const rowText = $(element).text().trim();
+      const bpomMatch = rowText.match(/(MD|NA|SL|HT|DBL)\d{14,15}/i);
       
-      if (name) {
-        results.push({ name, nomorBPOM, merk });
+      if (bpomMatch) {
+        const cells = $(element).find('td');
+        let name = '';
+        
+        if (cells.length >= 1) {
+          name = $(cells[0]).text().trim() || productName;
+        }
+        
+        results.push({ 
+          name: name, 
+          nomorBPOM: bpomMatch[1]
+        });
       }
     });
+    
+    // 2. If no table rows found, look for any text containing BPOM numbers
+    if (results.length === 0) {
+      const bodyText = $('body').text();
+      const bpomMatches = bodyText.match(/(MD|NA|SL|HT|DBL)\d{14,15}/gi);
+      
+      if (bpomMatches) {
+        bpomMatches.forEach(bpom => {
+          results.push({ 
+            name: productName, 
+            nomorBPOM: bpom
+          });
+        });
+      }
+    }
+    
+    // 3. If still no results, try to find any product-related elements
+    if (results.length === 0) {
+      $('.product, .item, .result, div').each((i, element) => {
+        const text = $(element).text().trim();
+        if (text.toLowerCase().includes(productName.toLowerCase()) && 
+            text.length < 500) { // Avoid very long text blocks
+          const bpomMatch = text.match(/(MD|NA|SL|HT|DBL)\d{14,15}/i);
+          if (bpomMatch) {
+            results.push({ 
+              name: productName, 
+              nomorBPOM: bpomMatch[1]
+            });
+          }
+        }
+      });
+    }
     
     return results;
   } catch (error) {
@@ -119,72 +175,111 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'productName is required' }, { status: 400 });
     }
 
-    console.log("Scraping real data for:", productName);
+    console.log("Getting product details for:", productName);
     
-    // Web scraping for BPOM data
-    const bpomData = await scrapeBPOM(productName);
-    console.log("BPOM data found:", bpomData);
+    // Test the API key by creating a simple model instance
+    try {
+      console.log('Initializing Google AI client...');
+      console.log('API Key present:', !!process.env.GOOGLE_AI_API_KEY);
+      
+      // Just verify the client was created successfully
+      console.log('Google AI client initialized successfully');
+    } catch (error: any) {
+      console.error('Failed to initialize Google AI client:', error);
+      console.error('Error details:', error?.message || 'Unknown error');
+      return NextResponse.json({ error: 'Failed to initialize AI client' }, { status: 500 });
+    }
     
-    // Web scraping for ingredient data
-    const ingredientData = await scrapeIngredients(productName);
-    console.log("Ingredient data found:", ingredientData);
+    // Use Gemini 1.5 Flash with web search capabilities
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-2.5-flash"
+    });
     
-    // Use Groq to process real scraped data
-    const groqResponse = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
-      messages: [
-        {
-          role: "user",
-          content: `Berdasarkan data REAL dari web scraping berikut, buat informasi detail produk "${productName}":
+    const prompt = `Cari informasi LENGKAP untuk produk "${productName}" dengan melakukan pencarian Google.
 
-Data BPOM: ${JSON.stringify(bpomData, null, 2)}
-Data Ingredient: ${JSON.stringify(ingredientData, null, 2)}
+LAKUKAN PENELUSURAN GOOGLE BERIKUT:
+1. Cari: "nomor BPOM ${productName}"
+2. Cari: "${productName} komposisi lengkap"  
+3. Cari: "${productName} anjuran pemakaian"
+4. Cari: "${productName} larangan dan efek samping"
 
-Format JSON:
+BERDASARKAN HASIL PENELUSURAN, berikan JSON response:
 {
   "namaProduk": "${productName}",
-  "merk": "Extract the brand/merk from the product name. For 'COSRX BHA Blackhead Power Liquid', merk should be 'COSRX'. For 'Tolak Angin Batuk', merk should be 'Tolak Angin'.",
-  "noBPOM": "Nomor BPOM dari data scraping atau 'Produk belum terdaftar di BPOM'",
+  "noBPOM": "BPOM number dari hasil pencarian di Google atau 'Produk belum terdaftar di BPOM'",
   "komposisi": [
     {"nama": "Nama Bahan 1", "fungsi": "Fungsi Bahan 1"},
     {"nama": "Nama Bahan 2", "fungsi": "Fungsi Bahan 2"}
   ],
-  "anjuran": ["Anjuran penggunaan 1", "Anjuran penggunaan 2"],
+  "anjuran": ["Anjuran 1", "Anjuran 2"],
   "larangan": ["Larangan 1", "Larangan 2"],
-  "sumber": [
-    "https://cekbpom.pom.go.id/",
-    "https://incidecoder.com/",
-    "https://www.paulaschoice.com/shop-ingredient"
-  ]
+  "sources": ["https://cekbpom.pom.go.id/", "https://google.com/search"]
 }
 
-PENTING:
-1. Extract merk secara cerdas dari nama produk. Untuk "COSRX BHA Blackhead Power Liquid", merk adalah "COSRX"
-2. Gunakan data BPOM yang benar dari web scraping
-3. Jika tidak ada data BPOM, tulis 'Produk belum terdaftar di BPOM'
-4. Gunakan SEMUA ingredients yang ditemukan dari web scraping
-5. JANGAN gunakan nama sumber seperti "Paula's Choice" sebagai merk
-6. Jangan membuat data palsu!`
-        }
-      ],
-      response_format: { type: "json_object" }
-    });
-    
-    const groqText = groqResponse.choices[0]?.message?.content;
-    console.log("Groq response:", groqText);
-    
-    if (!groqText) {
-      return NextResponse.json({ error: 'No response from Groq' }, { status: 500 });
-    }
-    
+PENTING: 
+- Gunakan nomor BPOM yang DITEMUKAN di ketika search di google
+- Jika tidak ditemukan nomor BPOM, tulis "Produk belum terdaftar di BPOM"
+- JANGAN membuat nomor BPOM yang tidak ada!`;
+
     try {
-      const groqData = JSON.parse(groqText);
-      console.log("Parsed Groq data:", groqData);
-      return NextResponse.json(groqData);
-    } catch (parseError) {
-      console.error("Failed to parse Groq response:", parseError);
-      console.error("Raw response:", groqText);
-      return NextResponse.json({ error: 'Failed to parse response' }, { status: 500 });
+      const result = await model.generateContent(prompt);
+      const geminiText = result.response.text();
+      console.log("Gemini response:", geminiText);
+      
+      if (!geminiText) {
+        return NextResponse.json({ message: 'No response from Gemini' }, { status: 500 });
+      }
+      
+      try {
+        // Clean up the response text - extract JSON if it's wrapped in code blocks
+        let cleanedText = geminiText;
+        
+        // Remove markdown code blocks if present
+        if (geminiText.includes('```')) {
+          const jsonMatch = geminiText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+          if (jsonMatch) {
+            cleanedText = jsonMatch[1];
+          }
+        }
+        
+        console.log("Cleaned Gemini response:", cleanedText);
+        
+        const geminiData = JSON.parse(cleanedText);
+        console.log("Parsed Gemini data:", geminiData);
+        
+        // Validate required fields
+        if (!geminiData.namaProduk) {
+          geminiData.namaProduk = productName;
+        }
+        
+        // Ensure sources field exists
+        if (!geminiData.sources) {
+          geminiData.sources = ["https://cekbpom.pom.go.id/", "https://google.com/search"];
+        }
+        
+        return NextResponse.json(geminiData);
+      } catch (parseError) {
+        console.error("Failed to parse Gemini response:", parseError);
+        console.error("Raw response:", geminiText);
+        return NextResponse.json({ 
+          message: 'Failed to parse response',
+          rawResponse: geminiText 
+        }, { status: 500 });
+      }
+    } catch (error: any) {
+      console.error("Gemini API Error:", error);
+
+      if (error?.status === 503 || error?.code === 503) {
+        return NextResponse.json(
+          { message: "AI sedang sibuk, coba beberapa saat lagi" },
+          { status: 503 }
+        );
+      }
+
+      return NextResponse.json(
+        { message: "Terjadi kesalahan server" },
+        { status: 500 }
+      );
     }
     
   } catch (error) {

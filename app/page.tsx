@@ -2,76 +2,49 @@
 
 import Image from "next/image";
 import Header from "./components/Header";
-import { useState, useEffect } from "react";
-import { dummyProducts, Product } from "./data/dummyProducts";
-import { getProductRecommendations, getProductDetails, ProductRecommendation } from "./lib/gemini";
+import { useState } from "react";
+import { Product } from "./types/product";
+import { getProductDetails } from "./lib/gemini";
+import { ProductAnalyzer } from "./lib/productAnalyzer";
 
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResult, setSearchResult] = useState<Product | null>(null);
-  const [recommendations, setRecommendations] = useState<ProductRecommendation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [showRecommendations, setShowRecommendations] = useState(false);
+  const [isBPOMSearch, setIsBPOMSearch] = useState(false);
+  const analyzer = new ProductAnalyzer();
 
-  // Debounce function to prevent multiple rapid API calls
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (searchTerm.trim() === "") {
-        setRecommendations([]);
-        setShowRecommendations(false);
-        setSearchResult(null);
-        return;
-      }
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!searchTerm.trim()) {
+      setSearchResult(null);
+      return;
+    }
 
-      // Get recommendations for autocomplete (debounced)
-      if (searchTerm.length >= 2) {
-        fetchRecommendations(searchTerm);
-      }
-    }, 300); // 300ms delay
-
-    return () => clearTimeout(timeoutId);
-  }, [searchTerm]);
-
-  const fetchRecommendations = async (value: string) => {
     setIsLoading(true);
     try {
-      const recs = await getProductRecommendations(value);
-      setRecommendations(recs);
-      setShowRecommendations(true);
+      const result = await getProductDetails(searchTerm);
+      setSearchResult(result);
     } catch (error) {
-      console.error("Error getting recommendations:", error);
-      setRecommendations([]);
+      console.error("Error getting product details:", error);
+      setSearchResult(null);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
+    
+    // Check if input looks like BPOM number
+    const bpomPattern = /(MD|NA|SL|HT|DBL|TR)\d{14,15}/i;
+    setIsBPOMSearch(bpomPattern.test(value.replace(/\s/g, '')));
+    
     // Clear product details when user starts typing again
     if (value.trim() === "") {
       setSearchResult(null);
-      setRecommendations([]);
-      setShowRecommendations(false);
-    }
-  };
-
-  const handleProductSelect = async (productName: string) => {
-    setSearchTerm(""); // Clear search input
-    setShowRecommendations(false);
-    setRecommendations([]); // Clear recommendations when product is selected
-    
-    setIsLoading(true);
-    try {
-      const productDetails = await getProductDetails(productName);
-      if (productDetails) {
-        setSearchResult(productDetails);
-      }
-    } catch (error) {
-      console.error("Error getting product details:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
   return (
@@ -99,52 +72,48 @@ export default function Home() {
         <h2 className="text-2xl font-semibold text-[#17A2B8] dark:text-white mb-4 text-center">
           Produk apa yang mau dijelasin?
         </h2>
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="cari produk"
-            value={searchTerm}
-            onChange={handleSearch}
-            onFocus={() => searchTerm.length >= 2 && setShowRecommendations(true)}
-            className="w-full px-4 py-3 pl-12 text-lg border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-          />
-          <svg
-            className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-          
-          {/* Recommendations Dropdown */}
-          {showRecommendations && recommendations.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
-              {isLoading ? (
-                <div className="px-4 py-3 text-gray-500 dark:text-gray-400">
-                  Mencari produk...
-                </div>
-              ) : (
-                recommendations.map((rec, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleProductSelect(rec.name)}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600 last:border-b-0 transition-colors"
-                  >
-                    <div className="font-medium text-gray-900 dark:text-white">
-                      {rec.name}
-                    </div>
-                  </button>
-                ))
-              )}
-            </div>
-          )}
+        <div className="text-center mb-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Ketik nama produk dan tekan Enter (contoh: Tolak Angin Batuk, Wardah, Madu TJ)
+          </p>
         </div>
+        <form onSubmit={handleSearch}>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Ketik nama produk..."
+              value={searchTerm}
+              onChange={handleInputChange}
+              className={`w-full px-4 py-3 pl-12 text-lg border rounded-full focus:outline-none focus:ring-2 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white ${
+                isBPOMSearch 
+                  ? 'border-green-500 focus:ring-green-500' 
+                  : 'border-gray-300 focus:ring-blue-500'
+              }`}
+            />
+            <svg
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            
+            {/* BPOM Indicator */}
+            {isBPOMSearch && (
+              <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                  BPOM Search
+                </span>
+              </div>
+            )}
+          </div>
+        </form>
       </section>
 
       {/* Product Result Section */}
@@ -157,10 +126,6 @@ export default function Home() {
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div>
-                  <span className="font-semibold text-gray-700 dark:text-gray-300">Merk:</span>
-                  <p className="text-gray-600 dark:text-gray-400">{searchResult.merk}</p>
-                </div>
                 <div>
                   <span className="font-semibold text-gray-700 dark:text-gray-300">No. BPOM/Izin Edar:</span>
                   <p className="text-gray-600 dark:text-gray-400">{searchResult.noBPOM}</p>
