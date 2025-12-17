@@ -1,12 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Header from "../components/Header";
-import { dummyCombinations, ProductCombination } from "../data/dummyProducts";
+
+export interface ProductCombination {
+  produk1: string;
+  produk2: string;
+  status: "aman" | "berisiko" | "tidak_direkomendasikan";
+  deskripsi: string;
+  hasil: {
+    efekSamping: string[];
+    anjuran: string[];
+  };
+  sources: string[];
+}
 
 export default function PadukanProduk() {
   const [productInputs, setProductInputs] = useState<string[]>(["", ""]);
   const [checkResult, setCheckResult] = useState<ProductCombination | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
 
   const addProductInput = () => {
     if (productInputs.length < 4) {
@@ -20,21 +34,51 @@ export default function PadukanProduk() {
     setProductInputs(newProductInputs);
   };
 
-  const handleCheck = () => {
+  // Auto-scroll to result when combination analysis appears
+  useEffect(() => {
+    if (checkResult && resultRef.current) {
+      resultRef.current.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  }, [checkResult]);
+
+  const handleCheck = async () => {
     const filledInputs = productInputs.filter(input => input.trim() !== "");
     
     if (filledInputs.length >= 2) {
       const produk1 = filledInputs[0].trim();
       const produk2 = filledInputs[1].trim();
       
-      // Check if this combination exists in dummy data
-      const combination = dummyCombinations.find(
-        combo => 
-          (combo.produk1.toLowerCase() === produk1.toLowerCase() && combo.produk2.toLowerCase() === produk2.toLowerCase()) ||
-          (combo.produk1.toLowerCase() === produk2.toLowerCase() && combo.produk2.toLowerCase() === produk1.toLowerCase())
-      );
+      setIsLoading(true);
+      setError(null);
       
-      setCheckResult(combination || null);
+      try {
+        const response = await fetch('/api/product-combination', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ produk1, produk2 }),
+        });
+
+        if (!response.ok) {
+          if (response.status === 429) {
+            throw new Error('Token Gemini Habis');
+          }
+          throw new Error(`Failed to analyze combination: ${response.status} ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        setCheckResult(result);
+      } catch (error) {
+        console.error("Error analyzing product combination:", error);
+        setError(error instanceof Error ? error.message : 'Terjadi kesalahan');
+        setCheckResult(null);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -87,36 +131,53 @@ export default function PadukanProduk() {
           </div>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
+            <p className="font-semibold">Error:</p>
+            <p>{error}</p>
+          </div>
+        )}
+
+        {/* Loading Indicator */}
+        {isLoading && (
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 flex items-center space-x-3 shadow-lg">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              <span className="text-gray-900 dark:text-white">Menganalisis kombinasi produk...</span>
+            </div>
+          </div>
+        )}
+
         {/* Result Display Section */}
         {checkResult && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mt-6">
+          <div ref={resultRef} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mt-6">
             <div className="mb-6">
               <div className={`inline-block px-4 py-2 rounded-lg text-white font-semibold ${
-                checkResult.hasil.status === 'aman' ? 'bg-green-500' : 'bg-red-500'
+                checkResult.status === 'aman' ? 'bg-green-500' : 
+                checkResult.status === 'berisiko' ? 'bg-yellow-500' : 'bg-red-500'
               }`}>
-                {checkResult.hasil.status === 'aman' ? 'AMAN' : 'BERISIKO'}
+                {checkResult.status === 'aman' ? 'AMAN' : 
+                 checkResult.status === 'berisiko' ? 'BERISIKO' : 'TIDAK DIREKOMENDASIKAN'}
               </div>
             </div>
 
             <div className="mb-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Kesimpulan</h3>
-              <p className="text-gray-600 dark:text-gray-300">{checkResult.hasil.kesimpulan}</p>
-            </div>
-
-            <div className="mb-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Detail Analisis</h3>
-              <ul className="list-disc list-inside space-y-2">
-                {checkResult.hasil.detailAnalisis.map((item, index) => (
-                  <li key={index} className="text-gray-600 dark:text-gray-300">{item}</li>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Deskripsi</h3>
+              <div className="text-gray-600 dark:text-gray-300">
+                {checkResult.deskripsi.split('\n').map((point, index) => (
+                  <div key={index} className="mb-2">
+                    {point.replace(/^•\s*/, '').replace(/\*\*/g, '')}
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h3 className="text-xl font-bold text-green-600 dark:text-green-400 mb-3">Anjuran Pemakaian</h3>
+                <h3 className="text-xl font-bold text-green-600 dark:text-green-400 mb-3">Anjuran</h3>
                 <ul className="list-disc list-inside space-y-2">
-                  {checkResult.hasil.anjuranPemakaian.map((item, index) => (
+                  {checkResult.hasil.anjuran.map((item, index) => (
                     <li key={index} className="text-gray-600 dark:text-gray-300 text-sm">{item}</li>
                   ))}
                 </ul>
@@ -131,6 +192,26 @@ export default function PadukanProduk() {
                 </ul>
               </div>
             </div>
+
+            {checkResult.sources && checkResult.sources.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-600">
+                <h3 className="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">Sumber:</h3>
+                <ul className="list-disc list-inside space-y-1">
+                  {checkResult.sources.map((source, index) => (
+                    <li key={index} className="text-gray-600 dark:text-gray-400 text-sm">
+                      <a 
+                        href={source} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        {source}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
       </main>
