@@ -110,7 +110,7 @@ BERIKAN RESPONSE DALAM FORMAT JSON BERIKUT (TANPA TAMBAHAN TEKS APA PUN):
   "larangan": ["Larangan 1", "Larangan 2"],
   "sources": [
     "https://cekbpom.pom.go.id/",
-    "Sumber umum produsen atau referensi tepercaya"
+    "Sumber umum produsen atau referensi tepercaya, pastikan URLnya bisa dibuka dan isinya bukan not found"
   ]
 }
 `;

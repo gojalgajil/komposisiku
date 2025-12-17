@@ -79,3 +79,28 @@ export async function getProductDetails(productName: string): Promise<ProductDet
     return null;
   }
 }
+
+// Image Analysis using Gemini Vision
+export async function analyzeProductImage(imageFile: File): Promise<ProductDetails | null> {
+  try {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+
+    const response = await fetch('/api/image-analysis', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('Token Gemini Habis');
+      }
+      throw new Error(`Failed to analyze image: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error analyzing product image:", error);
+    return null;
+  }
+}

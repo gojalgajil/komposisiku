@@ -4,12 +4,14 @@ import Image from "next/image";
 import Header from "./components/Header";
 import { useState } from "react";
 import { Product } from "./types/product";
-import { getProductDetails } from "./lib/gemini";
+import { getProductDetails, analyzeProductImage } from "./lib/gemini";
 
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResult, setSearchResult] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +31,108 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCameraCapture = async () => {
+    try {
+      // Check if camera is available
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' } 
+      });
+      
+      // Create video element to show camera feed
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.play();
+      
+      // Create modal for camera capture
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+      modal.innerHTML = `
+        <div class="bg-white rounded-lg p-4 max-w-md w-full mx-4">
+          <h3 class="text-lg font-semibold mb-4">Ambil Foto Produk</h3>
+          <video id="camera-feed" class="w-full rounded-lg mb-4" autoplay></video>
+          <div class="flex justify-end space-x-2">
+            <button id="cancel-camera" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">Batal</button>
+            <button id="capture-photo" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Ambil Foto</button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      // Get the video element in modal
+      const modalVideo = modal.querySelector('#camera-feed') as HTMLVideoElement;
+      modalVideo.srcObject = stream;
+      
+      // Handle cancel
+      const cancelBtn = modal.querySelector('#cancel-camera');
+      cancelBtn?.addEventListener('click', () => {
+        stream.getTracks().forEach(track => track.stop());
+        document.body.removeChild(modal);
+      });
+      
+      // Handle capture
+      const captureBtn = modal.querySelector('#capture-photo');
+      captureBtn?.addEventListener('click', () => {
+        // Create canvas to capture image
+        const canvas = document.createElement('canvas');
+        canvas.width = modalVideo.videoWidth;
+        canvas.height = modalVideo.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(modalVideo, 0, 0);
+        
+        // Convert to blob and create file
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const file = new File([blob], 'product-photo.jpg', { type: 'image/jpeg' });
+            setSelectedImage(file);
+            setImagePreview(URL.createObjectURL(blob));
+          }
+          stream.getTracks().forEach(track => track.stop());
+          document.body.removeChild(modal);
+        }, 'image/jpeg');
+      });
+      
+    } catch (error) {
+      console.error('Camera access denied:', error);
+      // Fallback to file upload if camera is not available
+      document.getElementById('image-upload')?.click();
+    }
+  };
+
+  const handleImageAnalysis = async () => {
+    if (!selectedImage) return;
+
+    setIsLoading(true);
+    try {
+      const result = await analyzeProductImage(selectedImage);
+      setSearchResult(result);
+    } catch (error) {
+      console.error("Error analyzing image:", error);
+      setSearchResult(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const clearImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -67,10 +171,12 @@ export default function Home() {
         </h2>
         <div className="text-center mb-4">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Ketik nama produk dan tekan Enter (contoh: Tolak Angin Batuk, Wardah, Madu TJ)
+            Ketik nama produk atau upload foto produk (contoh: Tolak Angin Batuk, Wardah, Madu TJ)
           </p>
         </div>
-        <form onSubmit={handleSearch}>
+        
+        {/* Text Search */}
+        <form onSubmit={handleSearch} className="mb-4">
           <div className="relative">
             <input
               type="text"
@@ -94,6 +200,115 @@ export default function Home() {
             </svg>
           </div>
         </form>
+
+        {/* Image Upload */}
+        <div className="text-center">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+            Atau foto produk untuk identifikasi otomatis
+          </p>
+          
+          {!imagePreview ? (
+            <div className="flex justify-center space-x-4">
+              {/* Camera Capture Button */}
+              <button
+                onClick={handleCameraCapture}
+                className="flex flex-col items-center p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors cursor-pointer"
+              >
+                <svg
+                  className="w-12 h-12 text-gray-400 mb-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Ambil Foto
+                </p>
+              </button>
+              
+              {/* File Upload Button */}
+              <div
+                className="flex flex-col items-center p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors cursor-pointer"
+                onClick={() => document.getElementById('image-upload')?.click()}
+              >
+                <input
+                  id="image-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                <svg
+                  className="w-12 h-12 text-gray-400 mb-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  />
+                </svg>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Upload Foto
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                  Max size: 10MB
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="border rounded-lg p-4">
+              <div className="relative inline-block">
+                <img
+                  src={imagePreview}
+                  alt="Product preview"
+                  className="max-w-xs max-h-48 rounded-lg object-cover"
+                />
+                <button
+                  onClick={clearImage}
+                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <div className="mt-4">
+                <button
+                  onClick={handleImageAnalysis}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition-colors"
+                >
+                  Analisis Produk
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* Product Result Section */}
