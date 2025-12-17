@@ -3,31 +3,28 @@
 import Image from "next/image";
 import Header from "./components/Header";
 import { useState, useRef, useEffect } from "react";
-import { Product } from "./types/product";
 import { getProductDetails, analyzeProductImage } from "./lib/gemini";
+import { Product } from "./types/product";
 
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResult, setSearchResult] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [imageError, setImageError] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const productDetailsRef = useRef<HTMLDivElement>(null);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!searchTerm.trim()) {
       setSearchResult(null);
-      setImageError(false);
       return;
     }
 
     setIsLoading(true);
     setError(null);
-    setImageError(false);
     
     try {
       const result = await getProductDetails(searchTerm);
@@ -332,136 +329,114 @@ export default function Home() {
       {/* Product Result Section */}
       {searchResult && (
         <section ref={productDetailsRef} className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
-            <div className="p-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 uppercase">
-                {searchResult.namaProduk}
-              </h3>
-              
-              {/* Product Image Display */}
-              {searchResult.produkImage && !imageError && (
-                <div className="mb-6 flex justify-center">
-                  <div className="relative">
-                    <img
-                      src={searchResult.produkImage}
-                      alt={`Gambar produk ${searchResult.namaProduk}`}
-                      className="w-32 h-32 object-cover rounded-lg shadow-md border border-gray-200 dark:border-gray-600"
-                      onLoad={() => {
-                        setImageError(false);
-                        // Hide loading indicator
-                        const loadingIndicator = document.getElementById('image-loading-indicator');
-                        if (loadingIndicator) {
-                          loadingIndicator.style.display = 'none';
-                        }
-                      }}
-                      onError={(e) => {
-                        console.log('Image failed to load:', searchResult.produkImage);
-                        setImageError(true);
-                        // Hide loading indicator
-                        const loadingIndicator = document.getElementById('image-loading-indicator');
-                        if (loadingIndicator) {
-                          loadingIndicator.style.display = 'none';
-                        }
-                      }}
-                      crossOrigin="anonymous"
-                    />
-                    {/* Loading indicator */}
-                    <div
-                      id="image-loading-indicator"
-                      className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg"
-                    >
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Fallback for failed image */}
-              {imageError && searchResult.produkImage && (
-                <div className="mb-6 flex justify-center">
-                  <div className="w-32 h-32 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center border border-gray-200 dark:border-gray-600">
-                    <div className="text-center p-2">
-                      <div className="text-gray-400 dark:text-gray-500 text-xs">
-                        Gambar tidak tersedia
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                {/* <div>
-                  <span className="font-semibold text-gray-700 dark:text-gray-300">No. BPOM/Izin Edar:</span>
-                  <p className="text-gray-600 dark:text-gray-400">{searchResult.noBPOM}</p>
-                </div> */}
+          <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900 rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+            <div className="p-8">
+              {/* Product Header */}
+              <div className="text-center mb-8">
+                <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                  {searchResult.namaProduk}
+                </h3>
+                <div className="w-24 h-1 bg-gradient-to-r from-[#17A2B8] to-[#9370DB] mx-auto rounded-full"></div>
               </div>
 
-              <div className="mb-6">
-                <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Komposisi:</h4>
-                <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
-                  <thead>
-                    <tr className="bg-gray-100 dark:bg-gray-700">
-                      <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-left text-gray-700 dark:text-gray-300">Nama</th>
-                      <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-left text-gray-700 dark:text-gray-300">Fungsi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {searchResult.komposisi.map((item, index) => (
-                      <tr key={index}>
-                        <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-gray-600 dark:text-gray-400">
-                          {item.nama}
-                        </td>
-                        <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-gray-600 dark:text-gray-400">
-                          {item.fungsi}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+
+
+              {/* Composition Section */}
+              <div className="mb-8">
+                <div className="flex items-center mb-4">
+                  <svg className="w-6 h-6 text-[#17A2B8] mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                  </svg>
+                  <h4 className="text-xl font-semibold text-gray-900 dark:text-white">Komposisi</h4>
+                </div>
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-600 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gradient-to-r from-[#17A2B8] to-[#45D2E8]">
+                        <tr>
+                          <th className="px-6 py-4 text-left text-white font-semibold">Bahan</th>
+                          <th className="px-6 py-4 text-left text-white font-semibold">Fungsi</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                        {searchResult.komposisi.map((item, index) => (
+                          <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <td className="px-6 py-4 text-gray-900 dark:text-white font-medium">
+                              {item.nama}
+                            </td>
+                            <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
+                              {item.fungsi}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-semibold text-green-600 dark:text-green-400 mb-2">Anjuran:</h4>
-                  <ul className="list-disc list-inside space-y-1">
+              {/* Recommendations and Warnings */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-6 border border-green-200 dark:border-green-800">
+                  <div className="flex items-center mb-4">
+                    <svg className="w-6 h-6 text-green-600 dark:text-green-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h4 className="text-xl font-semibold text-green-800 dark:text-green-300">Anjuran</h4>
+                  </div>
+                  <ul className="space-y-2">
                     {searchResult.anjuran.map((item, index) => (
-                      <li key={index} className="text-gray-600 dark:text-gray-400 text-sm">
+                      <li key={index} className="flex items-start text-green-700 dark:text-green-300 text-sm">
+                        <span className="inline-block w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                         {item}
                       </li>
                     ))}
                   </ul>
                 </div>
-                
-                <div>
-                  <h4 className="font-semibold text-red-600 dark:text-red-400 mb-2">Larangan:</h4>
-                  <ul className="list-disc list-inside space-y-1">
+
+                <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 rounded-xl p-6 border border-red-200 dark:border-red-800">
+                  <div className="flex items-center mb-4">
+                    <svg className="w-6 h-6 text-red-600 dark:text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <h4 className="text-xl font-semibold text-red-800 dark:text-red-300">Larangan</h4>
+                  </div>
+                  <ul className="space-y-2">
                     {searchResult.larangan.map((item, index) => (
-                      <li key={index} className="text-gray-600 dark:text-gray-400 text-sm">
+                      <li key={index} className="flex items-start text-red-700 dark:text-red-300 text-sm">
+                        <span className="inline-block w-2 h-2 bg-red-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                         {item}
                       </li>
                     ))}
                   </ul>
                 </div>
               </div>
-              
+
               {/* Sources Section */}
               {searchResult.sources && searchResult.sources.length > 0 && (
-                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-600">
-                  <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Sumber:</h4>
-                  <ul className="list-disc list-inside space-y-1">
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-600">
+                  <div className="flex items-center mb-4">
+                    <svg className="w-6 h-6 text-[#9370DB] mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                    <h4 className="text-xl font-semibold text-gray-900 dark:text-white">Sumber Referensi</h4>
+                  </div>
+                  <div className="grid gap-2">
                     {searchResult.sources.map((source, index) => (
-                      <li key={index} className="text-gray-600 dark:text-gray-400 text-sm">
-                        <a 
-                          href={source} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-blue-600 dark:text-blue-400 hover:underline"
-                        >
-                          {source}
-                        </a>
-                      </li>
+                      <a
+                        key={index}
+                        href={source}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30 transition-all duration-200 border border-blue-200 dark:border-blue-800"
+                      >
+                        <svg className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                        <span className="text-blue-700 dark:text-blue-300 text-sm truncate">{source}</span>
+                      </a>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
             </div>
@@ -479,65 +454,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* <div className="flex min-h-[calc(100vh-4rem-400px)] items-center justify-center font-sans">
-        <main className="flex w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div> */}
-      {/* </main> */}
-      {/* </div> */}
     </div>
   );
 }

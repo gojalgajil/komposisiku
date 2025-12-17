@@ -32,15 +32,13 @@ function extractMerk(productName: string): string {
 
 export interface ProductDetails {
   namaProduk: string;
-  merk: string;
-  noBPOM: string;
   komposisi: {
     nama: string;
     fungsi: string;
   }[];
   anjuran: string[];
   larangan: string[];
-  sumber: string[];
+  sources: string[];
 }
 
 
@@ -88,7 +86,6 @@ CARI INFORMASI PRODUK:
 BERDASARKAN HASIL PENELUSURAN, berikan JSON response:
 {
   "namaProduk": "${productName}",
-  "noBPOM": "Nomor BPOM yang benar atau 'Produk belum terdaftar di BPOM'",
   "komposisi": [
     { "nama": "Nama Bahan 1", "fungsi": "Fungsi bahan berdasarkan pengetahuan kosmetik/farmasi umum" },
     { "nama": "Nama Bahan 2", "fungsi": "Fungsi bahan berdasarkan pengetahuan kosmetik/farmasi umum" }

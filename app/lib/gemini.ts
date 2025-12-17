@@ -4,9 +4,6 @@ export interface ProductRecommendation {
 
 export interface ProductDetails {
   namaProduk: string;
-  merk: string;
-  noBPOM: string;
-  produkImage?: string;
   komposisi: {
     nama: string;
     fungsi: string;
