@@ -5,14 +5,11 @@ import Header from "./components/Header";
 import { useState } from "react";
 import { Product } from "./types/product";
 import { getProductDetails } from "./lib/gemini";
-import { ProductAnalyzer } from "./lib/productAnalyzer";
 
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResult, setSearchResult] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isBPOMSearch, setIsBPOMSearch] = useState(false);
-  const analyzer = new ProductAnalyzer();
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,10 +34,6 @@ export default function Home() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
-    
-    // Check if input looks like BPOM number
-    const bpomPattern = /(MD|NA|SL|HT|DBL|TR)\d{14,15}/i;
-    setIsBPOMSearch(bpomPattern.test(value.replace(/\s/g, '')));
     
     // Clear product details when user starts typing again
     if (value.trim() === "") {
@@ -84,11 +77,7 @@ export default function Home() {
               placeholder="Ketik nama produk..."
               value={searchTerm}
               onChange={handleInputChange}
-              className={`w-full px-4 py-3 pl-12 text-lg border rounded-full focus:outline-none focus:ring-2 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white ${
-                isBPOMSearch 
-                  ? 'border-green-500 focus:ring-green-500' 
-                  : 'border-gray-300 focus:ring-blue-500'
-              }`}
+              className="w-full px-4 py-3 pl-12 text-lg border rounded-full focus:outline-none focus:ring-2 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white border-gray-300 focus:ring-blue-500"
             />
             <svg
               className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
@@ -103,15 +92,6 @@ export default function Home() {
                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
               />
             </svg>
-            
-            {/* BPOM Indicator */}
-            {isBPOMSearch && (
-              <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                  BPOM Search
-                </span>
-              </div>
-            )}
           </div>
         </form>
       </section>
@@ -121,7 +101,7 @@ export default function Home() {
         <section className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
             <div className="p-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 uppercase">
                 {searchResult.namaProduk}
               </h3>
               
@@ -207,8 +187,8 @@ export default function Home() {
       
       {/* Loading Indicator */}
       {isLoading && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 flex items-center space-x-3">
+        <div className="fixed inset-0 flex items-center justify-center z-50" style={{backgroundColor: 'rgba(245, 240, 240, 0.64)'}}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 flex items-center space-x-3 shadow-lg">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
             <span className="text-gray-900 dark:text-white">Memuat data produk...</span>
           </div>

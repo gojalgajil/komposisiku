@@ -67,13 +67,9 @@ export async function getProductDetails(productName: string): Promise<ProductDet
     });
 
     if (!response.ok) {
-      // Commented out to reduce console spam
-      // const errorText = await response.text();
-      // console.error('Product Details API Error:', {
-      //   status: response.status,
-      //   statusText: response.statusText,
-      //   body: errorText
-      // });
+      if (response.status === 429) {
+        throw new Error('Token Gemini Habis');
+      }
       throw new Error(`Failed to get product details: ${response.status} ${response.statusText}`);
     }
 
