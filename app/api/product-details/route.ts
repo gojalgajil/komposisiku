@@ -43,6 +43,7 @@ export interface ProductDetails {
   sumber: string[];
 }
 
+
 export async function POST(request: Request) {
   let productName = '';
   
@@ -74,31 +75,17 @@ export async function POST(request: Request) {
       model: "gemini-2.5-flash"
     });
     
-const prompt = `
-Cari informasi LENGKAP untuk produk "${productName}".
+const prompt = `Sebagai ahli produk kesehatan dan kosmetik, cari informasi detail untuk "${productName}" dengan penelusuran komprehensif.
 
-CATATAN PENTING:
-- Kamu TIDAK memiliki kemampuan browsing real-time seperti manusia.
-- Jangan mengarang data.
-- Jika informasi TIDAK ditemukan secara eksplisit dan jelas, tuliskan sesuai aturan di bawah.
+CARI INFORMASI PRODUK:
+1. Cari: "${productName} komposisi bahan aktif"
+2. Cari: "${productName} ingredients composition"
+3. Cari: "${productName} fungsi manfaat"
+4. Cari: "${productName} side effects efek samping"
+5. Cari: "${productName} cara pakai anjuran"
+6. Cari: "${productName} larangan kontraindikasi"
 
-LAKUKAN PENELUSURAN INFORMASI BERDASARKAN PENGETAHUAN YANG DAPAT DIVERIFIKASI:
-1. Nomor BPOM produk "${productName}"
-2. Komposisi lengkap produk "${productName}"
-3. Anjuran pemakaian produk "${productName}"
-4. Larangan dan efek samping produk "${productName}"
-
-ATURAN KHUSUS NOMOR BPOM:
-- HANYA isi "noBPOM" jika kamu benar-benar yakin nomor tersebut valid dan sesuai format BPOM RI
-- Jika tidak yakin, tidak menemukan, atau berpotensi salah, WAJIB isi:
-  "Produk belum terdaftar di BPOM"
-- DILARANG membuat atau menebak nomor BPOM
-
-ATURAN SUMBER:
-- Jangan membuat link palsu
-- Jika sumber spesifik tidak diketahui, gunakan sumber umum yang relevan
-
-BERIKAN RESPONSE DALAM FORMAT JSON BERIKUT (TANPA TAMBAHAN TEKS APA PUN):
+BERDASARKAN HASIL PENELUSURAN, berikan JSON response:
 {
   "namaProduk": "${productName}",
   "noBPOM": "Nomor BPOM yang benar atau 'Produk belum terdaftar di BPOM'",
@@ -109,11 +96,14 @@ BERIKAN RESPONSE DALAM FORMAT JSON BERIKUT (TANPA TAMBAHAN TEKS APA PUN):
   "anjuran": ["Anjuran 1", "Anjuran 2"],
   "larangan": ["Larangan 1", "Larangan 2"],
   "sources": [
-    "https://cekbpom.pom.go.id/",
     "Sumber umum produsen atau referensi tepercaya, pastikan URLnya bisa dibuka dan isinya bukan not found"
   ]
 }
-`;
+
+ATURAN SUMBER:
+- Jangan membuat link palsu
+- Jika sumber spesifik tidak diketahui, gunakan sumber umum yang relevan
+- Pastikan semua URL bisa diakses langsung`;
 
     try {
       const result = await model.generateContent(prompt);

@@ -10,6 +10,8 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResult, setSearchResult] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [imageError, setImageError] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const productDetailsRef = useRef<HTMLDivElement>(null);
@@ -19,15 +21,20 @@ export default function Home() {
     
     if (!searchTerm.trim()) {
       setSearchResult(null);
+      setImageError(false);
       return;
     }
 
     setIsLoading(true);
+    setError(null);
+    setImageError(false);
+    
     try {
       const result = await getProductDetails(searchTerm);
       setSearchResult(result);
     } catch (error) {
-      console.error("Error getting product details:", error);
+      console.error("Error searching product:", error);
+      setError(error instanceof Error ? error.message : 'Terjadi kesalahan');
       setSearchResult(null);
     } finally {
       setIsLoading(false);
@@ -331,11 +338,62 @@ export default function Home() {
                 {searchResult.namaProduk}
               </h3>
               
+              {/* Product Image Display */}
+              {searchResult.produkImage && !imageError && (
+                <div className="mb-6 flex justify-center">
+                  <div className="relative">
+                    <img
+                      src={searchResult.produkImage}
+                      alt={`Gambar produk ${searchResult.namaProduk}`}
+                      className="w-32 h-32 object-cover rounded-lg shadow-md border border-gray-200 dark:border-gray-600"
+                      onLoad={() => {
+                        setImageError(false);
+                        // Hide loading indicator
+                        const loadingIndicator = document.getElementById('image-loading-indicator');
+                        if (loadingIndicator) {
+                          loadingIndicator.style.display = 'none';
+                        }
+                      }}
+                      onError={(e) => {
+                        console.log('Image failed to load:', searchResult.produkImage);
+                        setImageError(true);
+                        // Hide loading indicator
+                        const loadingIndicator = document.getElementById('image-loading-indicator');
+                        if (loadingIndicator) {
+                          loadingIndicator.style.display = 'none';
+                        }
+                      }}
+                      crossOrigin="anonymous"
+                    />
+                    {/* Loading indicator */}
+                    <div
+                      id="image-loading-indicator"
+                      className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg"
+                    >
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Fallback for failed image */}
+              {imageError && searchResult.produkImage && (
+                <div className="mb-6 flex justify-center">
+                  <div className="w-32 h-32 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center border border-gray-200 dark:border-gray-600">
+                    <div className="text-center p-2">
+                      <div className="text-gray-400 dark:text-gray-500 text-xs">
+                        Gambar tidak tersedia
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div>
+                {/* <div>
                   <span className="font-semibold text-gray-700 dark:text-gray-300">No. BPOM/Izin Edar:</span>
                   <p className="text-gray-600 dark:text-gray-400">{searchResult.noBPOM}</p>
-                </div>
+                </div> */}
               </div>
 
               <div className="mb-6">
