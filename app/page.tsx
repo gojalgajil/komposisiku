@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Header from "./components/Header";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Product } from "./types/product";
 import { getProductDetails, analyzeProductImage } from "./lib/gemini";
 
@@ -12,6 +12,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const productDetailsRef = useRef<HTMLDivElement>(null);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -134,6 +135,16 @@ export default function Home() {
     setSelectedImage(null);
     setImagePreview(null);
   };
+
+  // Auto-scroll to product details when result appears
+  useEffect(() => {
+    if (searchResult && productDetailsRef.current) {
+      productDetailsRef.current.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  }, [searchResult]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -313,7 +324,7 @@ export default function Home() {
 
       {/* Product Result Section */}
       {searchResult && (
-        <section className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        <section ref={productDetailsRef} className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
             <div className="p-6">
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 uppercase">
