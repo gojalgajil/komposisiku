@@ -67,7 +67,7 @@ export default function PadukanProduk() {
           if (response.status === 429) {
             throw new Error('Token Gemini Habis');
           }
-          throw new Error(`Failed to analyze combination: ${response.status} ${response.statusText}`);
+          throw new Error(`Sebentar ya: ${response.status} ${response.statusText}`);
         }
 
         const result = await response.json();

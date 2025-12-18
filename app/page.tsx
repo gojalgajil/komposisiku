@@ -5,8 +5,7 @@ import Header from "./components/Header";
 import { useState, useRef, useEffect } from "react";
 import { getProductDetails, analyzeProductImage } from "./lib/gemini";
 import { Product } from "./types/product";
-import { toPng } from 'html-to-image';
-import html2pdf from 'html2pdf.js';
+
 
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -170,6 +169,8 @@ export default function Home() {
     }
 
     try {
+      // Dynamically import html-to-image to avoid SSR issues
+      const { toPng } = await import('html-to-image');
       // Create temporary div for export (like in previous project)
       const tempDiv = document.createElement('div');
       tempDiv.style.position = 'fixed';
@@ -614,6 +615,8 @@ export default function Home() {
     }
 
     try {
+      // Dynamically import html2pdf to avoid SSR issues
+      const html2pdf = (await import('html2pdf.js')).default;
       // Create temporary div for export (same as PNG)
       const tempDiv = document.createElement('div');
       tempDiv.style.position = 'fixed';
