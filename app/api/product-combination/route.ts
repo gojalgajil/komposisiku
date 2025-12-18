@@ -13,17 +13,21 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
 export async function POST(request: Request) {
   let produk1 = '';
   let produk2 = '';
+  let produk3 = '';
+  let produk4 = '';
   
   try {
     const requestBody = await request.json();
     produk1 = requestBody.produk1;
     produk2 = requestBody.produk2;
+    produk3 = requestBody.produk3 || '';
+    produk4 = requestBody.produk4 || '';
     
     if (!produk1 || !produk2) {
-      return NextResponse.json({ error: 'Both produk1 and produk2 are required' }, { status: 400 });
+      return NextResponse.json({ error: 'produk1 and produk2 are required' }, { status: 400 });
     }
 
-    console.log("Checking product combination:", produk1, "and", produk2);
+    console.log("Checking product combination:", produk1, produk2, produk3, produk4);
 
     try {
       console.log('Initializing Google AI client...');
@@ -39,23 +43,32 @@ export async function POST(request: Request) {
       model: "gemini-2.5-flash"
     });
 
-    const prompt = `Sebagai ahli farmakologi dan interaksi obat, analisis keamanan kombinasi antara "${produk1}" dan "${produk2}" dengan penelusuran medis yang komprehensif.
+    const produkList = [produk1, produk2, produk3, produk4].filter(p => p.trim() !== '');
+    const produkListString = produkList.map((p, i) => `"${p}"`).join(', ');
+    
+    const prompt = `Sebagai ahli farmakologi dan interaksi obat, analisis keamanan kombinasi antara ${produkListString} dengan penelusuran medis yang komprehensif.
+
+TENTUKAN URUTAN PEMAKAIAN YANG OPTIMAL berdasarkan:
+- Waktu absorbsi obat (fasting/post-meal)
+- Potensi interaksi makanan
+- Stabilitas kandungan
+- Efektivitas maksimal
 
 LAKUKAN PENELUSURAN MEDIS BERIKUT:
-1. Cari: "drug interaction ${produk1} ${produk2}"
-2. Cari: "kontraindikasi ${produk1} ${produk2}"
-3. Cari: "side effects ${produk1} ${produk2} together"
-4. Cari: "can i take ${produk1} with ${produk2}"
-5. Cari: "food drug interaction ${produk1} ${produk2}"
-6. Cari: "herb drug interaction ${produk1} ${produk2}"
-7. Cari: "interaksi obat ${produk1} ${produk2}"
+${produkList.map((produk, i) => produkList.map((otherProduk, j) => i !== j ? `${i+1}. Cari: "drug interaction ${produk} ${otherProduk}"` : '').filter(s => s).join('\n')).join('\n')}
+${produkList.map((produk, i) => produkList.map((otherProduk, j) => i !== j ? `${i+1}. Cari: "kontraindikasi ${produk} ${otherProduk}"` : '').filter(s => s).join('\n')).join('\n')}
+${produkList.map((produk, i) => produkList.map((otherProduk, j) => i !== j ? `${i+1}. Cari: "side effects ${produk} ${otherProduk} together"` : '').filter(s => s).join('\n')).join('\n')}
+${produkList.map((produk, i) => produkList.map((otherProduk, j) => i !== j ? `${i+1}. Cari: "can i take ${produk} with ${otherProduk}"` : '').filter(s => s).join('\n')).join('\n')}
+${produkList.map((produk, i) => produkList.map((otherProduk, j) => i !== j ? `${i+1}. Cari: "food drug interaction ${produk} ${otherProduk}"` : '').filter(s => s).join('\n')).join('\n')}
+${produkList.map((produk, i) => produkList.map((otherProduk, j) => i !== j ? `${i+1}. Cari: "herb drug interaction ${produk} ${otherProduk}"` : '').filter(s => s).join('\n')).join('\n')}
+${produkList.map((produk, i) => produkList.map((otherProduk, j) => i !== j ? `${i+1}. Cari: "interaksi obat ${produk} ${otherProduk}"` : '').filter(s => s).join('\n')).join('\n')}
 
 BERDASARKAN EVIDENCE MEDIS, berikan JSON response:
 {
-  "produk1": "${produk1}",
-  "produk2": "${produk2}",
+  "produk": [${produkList.map(p => `"${p}"`).join(', ')}],
+  "urutanOptimal": [${produkList.map((_, i) => i + 1).join(', ')}],
   "status": "aman/berisiko/tidak_direkomendasikan",
-  "deskripsi": "• Mekanisme interaksi: penjelasan cara kerja interaksi\n• Dampak klinis: efek pada tubuh pasien\n• Tingkat keparahan: seberapa serius interaksi ini\n• Waktu onset: kapan interaksi mulai terasa\n• Jarak waktu: berapa lama efek interaksi bertahan",
+  "deskripsi": "• Mekanisme interaksi: Jelaskan interaksi antar produk secara spesifik, contoh: '(point) Panadol Extra + Saridon Extra: Interaksi utama dan paling berbahaya adalah tumpang tindih kandungan Paracetamol dan Kafein. Mengonsumsi keduanya bersamaan atau berdekatan secara signifikan meningkatkan risiko overdosis Paracetamal...'\n• Dampak klinis: Jelaskan efek pada tubuh pasien secara detail\n• Tingkat keparahan: Seberapa serius interaksi ini\n• Waktu onset: Kapan interaksi mulai terasa\n• Jarak waktu: Jelaskan urutan pemakaian optimal, contoh: '(point) Produk B dulu, 3-4 jam kemudian Produk D, dst..'",
   "hasil": {
     "efekSamping": ["Efek samping spesifik yang mungkin terjadi", "Interaksi yang mengurangi efektivitas", "Efek toksisitas tambahan"],
     "anjuran": ["Waktu konsumsi yang disarankan", "Dosis yang perlu disesuaikan", "Pantauan parameter yang diperlukan", "Kapan harus konsultasi dokter"]
@@ -65,9 +78,12 @@ BERDASARKAN EVIDENCE MEDIS, berikan JSON response:
 
 PENTING:
 - Status harus salah satu: "aman", "berisiko", atau "tidak_direkomendasikan"
+- urutanOptimal adalah array index produk (0-based) dalam urutan pemakaian yang direkomendasikan
+- Untuk Deskripsi, berikan penjelasan yang deskriptif dan detail untuk setiap bagian, bukan hanya label
+- Pada bagian "Mekanisme interaksi", jelaskan interaksi spesifik antar produk yang relevan menggunakan format "(point)"
+- Pada bagian "Jarak waktu", sertakan informasi urutan pemakaian optimal dengan contoh format yang jelas menggunakan "(point)"
 - Gunakan hanya informasi dari sumber medis/health yang terpercaya
 - Jika tidak ada informasi spesifik, berikan analisis berdasarkan prinsip farmakologi umum
-- Untuk Deskripsi, pastikan penulisannya tersusun rapih
 - Pastikan semua URL sources valid dan dapat diakses
 - JANGAN membuat informasi yang tidak berdasarkan fakta medis`;
 
@@ -97,12 +113,12 @@ PENTING:
         console.log("Parsed combination data:", combinationData);
         
         // Validate required fields
-        if (!combinationData.produk1) {
-          combinationData.produk1 = produk1;
+        if (!combinationData.produk) {
+          combinationData.produk = produkList;
         }
         
-        if (!combinationData.produk2) {
-          combinationData.produk2 = produk2;
+        if (!combinationData.urutanOptimal) {
+          combinationData.urutanOptimal = Array.from({ length: produkList.length }, (_, i) => i);
         }
 
         // Ensure status is valid
@@ -113,7 +129,7 @@ PENTING:
 
         // Ensure sources field exists
         if (!combinationData.sources) {
-          combinationData.sources = ["https://www.google.com/search?q=" + encodeURIComponent(`${produk1} ${produk2} interaksi`)];
+          combinationData.sources = ["https://www.google.com/search?q=" + encodeURIComponent(produkList.join(' ')) + ' interaksi'];
         }
 
         // Ensure hasil object exists

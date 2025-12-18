@@ -51,15 +51,21 @@ LAKUKAN ANALISIS GAMBAR:
 BERDASARKAN ANALISIS GAMBAR, berikan JSON response dengan format yang SAMA dengan product-details API:
 {
   "namaProduk": "Nama produk yang teridentifikasi dari gambar",
-  "noBPOM": "Nomor BPOM atau 'Produk belum terdaftar di BPOM'",
   "komposisi": [
     {"nama": "Nama Bahan 1", "fungsi": "Fungsi Bahan 1"},
     {"nama": "Nama Bahan 2", "fungsi": "Fungsi Bahan 2"}
   ],
   "anjuran": ["Anjuran 1", "Anjuran 2"],
   "larangan": ["Larangan 1", "Larangan 2"],
-  "sources": ["https://cekbpom.pom.go.id/", "https://google.com/search"]
+  "sources": [
+    "Sumber umum produsen atau referensi tepercaya, pastikan URLnya bisa dibuka dan isinya bukan not found"
+  ]
 }
+
+ATURAN SUMBER:
+- Jangan membuat link palsu
+- Jika sumber spesifik tidak diketahui, gunakan sumber umum yang relevan
+- Pastikan semua URL bisa diakses langsung
 
 PENTING:
 - Jika produk tidak dapat diidentifikasi, gunakan "Produk tidak dapat diidentifikasi" sebagai namaProduk
@@ -107,7 +113,7 @@ PENTING:
         
         // Ensure sources field exists
         if (!analysisResult.sources) {
-          analysisResult.sources = ["https://cekbpom.pom.go.id/", "https://google.com/search"];
+          analysisResult.sources = ["Sumber referensi produk tidak tersedia"];
         }
         
         return NextResponse.json(analysisResult);
