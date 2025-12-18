@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Header from "../components/Header";
-import { toPng } from "html-to-image";
+import html2canvas from "html2canvas";
 
 export interface ProductAlternative {
   originalProduct: string;
@@ -78,359 +78,259 @@ export default function CariAlternatif() {
     }
 
     try {
-      const tempDiv = document.createElement('div');
-      tempDiv.style.position = 'fixed';
-      tempDiv.style.top = '10px';
-      tempDiv.style.left = '10px';
-      tempDiv.style.width = '800px';
-      tempDiv.style.minHeight = '1200px';
-      tempDiv.style.padding = '40px';
-      tempDiv.style.backgroundColor = 'white';
-      tempDiv.style.color = 'black';
-      tempDiv.style.zIndex = '9999';
-      tempDiv.style.visibility = 'hidden';
-      tempDiv.style.boxSizing = 'border-box';
-      tempDiv.style.borderRadius = '16px';
-      tempDiv.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.1)';
-      tempDiv.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+      // Create canvas for programmatic text rendering
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
 
-      // Create content with simple inline styles
-      const contentDiv = document.createElement('div');
-      contentDiv.style.width = '600px';
-      contentDiv.style.padding = '32px';
-      contentDiv.style.backgroundColor = 'white';
-      contentDiv.style.color = 'black';
-      contentDiv.style.fontFamily = 'Arial, sans-serif';
-      contentDiv.style.lineHeight = '1.5';
+      // Canvas dimensions
+      const width = 800;
+      const padding = 40;
+      const contentWidth = width - (padding * 2);
+      canvas.width = width;
+      canvas.height = 3000; // Start with larger height for safety
+
+      // Background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, canvas.height);
+
+      // Font settings
+      ctx.fillStyle = '#111827';
+      ctx.textAlign = 'center';
+
+      let y = padding + 50;
 
       // Header
-      const headerDiv = document.createElement('div');
-      headerDiv.style.textAlign = 'center';
-      headerDiv.style.marginBottom = '32px';
+      ctx.font = 'bold 26px Arial';
+      ctx.fillText('Alternatif untuk', width / 2, y);
+      y += 35;
 
-      const titleH3 = document.createElement('h3');
-      titleH3.style.fontSize = '28px';
-      titleH3.style.fontWeight = '700';
-      titleH3.style.color = '#111827';
-      titleH3.style.marginBottom = '8px';
-      titleH3.textContent = 'Alternatif untuk';
+      ctx.fillStyle = '#17a2b8';
+      ctx.fillText(`"${searchResult.originalProduct}"`, width / 2, y);
+      y += 30;
 
-      const subTitleH3 = document.createElement('h3');
-      subTitleH3.style.fontSize = '28px';
-      subTitleH3.style.fontWeight = '700';
-      subTitleH3.style.color = '#17a2b8';
-      subTitleH3.style.marginBottom = '16px';
-      subTitleH3.textContent = `"${searchResult.originalProduct}"`;
-
-      const lineDiv = document.createElement('div');
-      lineDiv.style.width = '80px';
-      lineDiv.style.height = '3px';
-      lineDiv.style.backgroundColor = '#17a2b8';
-      lineDiv.style.margin = '0 auto';
-      lineDiv.style.borderRadius = '2px';
-
-      headerDiv.appendChild(titleH3);
-      headerDiv.appendChild(subTitleH3);
-      headerDiv.appendChild(lineDiv);
+      // Line under header
+      ctx.strokeStyle = '#17a2b8';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(width / 2 - 40, y);
+      ctx.lineTo(width / 2 + 40, y);
+      ctx.stroke();
+      y += 15;
 
       // Alternatives section
-      const alternativesDiv = document.createElement('div');
-      alternativesDiv.style.marginBottom = '32px';
-
-      const altTitleDiv = document.createElement('div');
-      altTitleDiv.style.display = 'flex';
-      altTitleDiv.style.alignItems = 'center';
-      altTitleDiv.style.marginBottom = '16px';
-
-      const altTitle = document.createElement('h4');
-      altTitle.style.fontSize = '18px';
-      altTitle.style.fontWeight = '600';
-      altTitle.style.color = '#111827';
-      altTitle.textContent = 'Alternatif Produk';
-
-      altTitleDiv.appendChild(altTitle);
-      alternativesDiv.appendChild(altTitleDiv);
+      // ctx.fillStyle = '#111827';
+      // ctx.font = 'bold 18px Arial';
+      // ctx.textAlign = 'left';
+      // ctx.fillText('Alternatif Produk', padding, y);
+      // y += 30;
 
       searchResult.alternatives.forEach((alt, index) => {
-        const altItemDiv = document.createElement('div');
-        altItemDiv.style.backgroundColor = 'white';
-        altItemDiv.style.border = '1px solid #d1d5db';
-        altItemDiv.style.borderRadius = '12px';
-        altItemDiv.style.padding = '20px';
-        altItemDiv.style.marginBottom = '16px';
+        // Fixed height for all product boxes (uniform grid)
+        const borderPadding = 20;
+        const fixedBoxHeight = 200;
+        const startY = y;
 
-        const altHeader = document.createElement('div');
-        altHeader.style.display = 'flex';
-        altHeader.style.justifyContent = 'space-between';
-        altHeader.style.alignItems = 'flex-start';
-        altHeader.style.marginBottom = '16px';
+        // Product border (black grid) - uniform height
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(padding - borderPadding, startY - borderPadding, contentWidth + borderPadding * 2, fixedBoxHeight);
 
-        const altInfo = document.createElement('div');
-        const altName = document.createElement('h5');
-        altName.style.fontSize = '20px';
-        altName.style.fontWeight = '600';
-        altName.style.color = '#111827';
-        altName.style.marginBottom = '4px';
-        altName.textContent = alt.nama;
+        // Reset y for content positioning
+        y = startY;
 
-        const altDetails = document.createElement('p');
-        altDetails.style.fontSize = '14px';
-        altDetails.style.color = '#6b7280';
-        altDetails.innerHTML = `<strong>Merek: ${alt.merek}</strong> | Kategori: ${alt.kategori}`;
+        // Brand (Merk)
+        ctx.fillStyle = '#374151';
+        ctx.font = 'bold 14px Arial';
+        ctx.fillText(`Merk: ${alt.merek}`, padding, y);
+        y += 25;
 
-        const altPrice = document.createElement('span');
-        altPrice.style.padding = '4px 12px';
-        altPrice.style.borderRadius = '20px';
-        altPrice.style.fontSize = '12px';
-        altPrice.style.fontWeight = '600';
-        if (alt.harga === 'murah') {
-          altPrice.style.backgroundColor = '#dcfce7';
-          altPrice.style.color = '#166534';
-        } else if (alt.harga === 'sedang') {
-          altPrice.style.backgroundColor = '#fef3c7';
-          altPrice.style.color = '#92400e';
-        } else {
-          altPrice.style.backgroundColor = '#fee2e2';
-          altPrice.style.color = '#991b1b';
+        // Product name
+        ctx.fillStyle = '#111827';
+        ctx.font = 'bold 17px Arial';
+        ctx.fillText(alt.nama, padding, y);
+
+        // Price badge
+        let badgeColor = '#dcfce7';
+        let badgeTextColor = '#166534';
+        if (alt.harga === 'sedang') {
+          badgeColor = '#fef3c7';
+          badgeTextColor = '#92400e';
+        } else if (alt.harga === 'mahal') {
+          badgeColor = '#fee2e2';
+          badgeTextColor = '#991b1b';
         }
-        altPrice.textContent = `Harga ${alt.harga}`;
 
-        altInfo.appendChild(altName);
-        altInfo.appendChild(altDetails);
-        altHeader.appendChild(altInfo);
-        altHeader.appendChild(altPrice);
-        altItemDiv.appendChild(altHeader);
+        const badgeWidth = 75;
+        const badgeX = contentWidth - badgeWidth + padding - 10;
+        ctx.fillStyle = badgeColor;
+        ctx.fillRect(badgeX, y - 10, badgeWidth, 22);
+        ctx.fillStyle = badgeTextColor;
+        ctx.font = '10px Arial';
+        ctx.textAlign = 'center';
+        const priceText = alt.harga === 'murah' ? 'Lebih Murah' :
+                         alt.harga === 'sedang' ? 'Harga Sama' :
+                         'Lebih Mahal';
+        ctx.fillText(priceText, badgeX + badgeWidth / 2, y + 1);
+        ctx.textAlign = 'left';
+        y += 35;
 
-        // Pros and cons grid
-        const gridDiv = document.createElement('div');
-        gridDiv.style.display = 'grid';
-        gridDiv.style.gridTemplateColumns = '1fr 1fr';
-        gridDiv.style.gap = '16px';
+        // Pros and cons - fixed layout within box
+        const sectionMargin = 10;
+        const halfWidth = (contentWidth - sectionMargin) / 2;
 
-        const prosDiv = document.createElement('div');
-        prosDiv.style.background = 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)';
-        prosDiv.style.padding = '16px';
-        prosDiv.style.borderRadius = '12px';
-        prosDiv.style.border = '1px solid #bbf7d0';
+        // Pros section
+        ctx.fillStyle = '#166534';
+        ctx.font = 'bold 12px Arial';
+        ctx.fillText('Keunggulan:', padding + sectionMargin, y);
 
-        const prosTitle = document.createElement('h6');
-        prosTitle.style.fontSize = '14px';
-        prosTitle.style.fontWeight = '600';
-        prosTitle.style.color = '#166534';
-        prosTitle.style.marginBottom = '8px';
-        prosTitle.textContent = 'Keunggulan';
+        ctx.font = '11px Arial';
+        const prosLines = wrapText(ctx, alt.keunggulan, halfWidth - 15, 13);
+        let prosY = y + 18;
+        // Limit to 3 lines max to fit in box
+        const displayProsLines = prosLines.slice(0, 3);
+        displayProsLines.forEach(line => {
+          ctx.fillText(line, padding + sectionMargin, prosY);
+          prosY += 15;
+        });
 
-        const prosText = document.createElement('p');
-        prosText.style.fontSize = '13px';
-        prosText.style.color = '#166534';
-        prosText.textContent = alt.keunggulan;
+        // Cons section
+        ctx.fillStyle = '#991b1b';
+        ctx.font = 'bold 12px Arial';
+        const consX = padding + halfWidth + sectionMargin;
+        ctx.fillText('Keterbatasan:', consX, y);
 
-        prosDiv.appendChild(prosTitle);
-        prosDiv.appendChild(prosText);
+        ctx.font = '11px Arial';
+        const consLines = wrapText(ctx, alt.keterbatasan, halfWidth - 15, 13);
+        let consY = y + 18;
+        // Limit to 3 lines max to fit in box
+        const displayConsLines = consLines.slice(0, 3);
+        displayConsLines.forEach(line => {
+          ctx.fillText(line, consX, consY);
+          consY += 15;
+        });
 
-        const consDiv = document.createElement('div');
-        consDiv.style.background = 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)';
-        consDiv.style.padding = '16px';
-        consDiv.style.borderRadius = '12px';
-        consDiv.style.border = '1px solid #fecaca';
-
-        const consTitle = document.createElement('h6');
-        consTitle.style.fontSize = '14px';
-        consTitle.style.fontWeight = '600';
-        consTitle.style.color = '#991b1b';
-        consTitle.style.marginBottom = '8px';
-        consTitle.textContent = 'Keterbatasan';
-
-        const consText = document.createElement('p');
-        consText.style.fontSize = '13px';
-        consText.style.color = '#991b1b';
-        consText.textContent = alt.keterbatasan;
-
-        consDiv.appendChild(consTitle);
-        consDiv.appendChild(consText);
-
-        gridDiv.appendChild(prosDiv);
-        gridDiv.appendChild(consDiv);
-        altItemDiv.appendChild(gridDiv);
-
-        alternativesDiv.appendChild(altItemDiv);
+        // Move to next product with tighter spacing
+        y = startY + fixedBoxHeight + 12;
       });
-
-
-
-      // Simple footer
-      const footerDiv = document.createElement('div');
-      footerDiv.style.marginTop = '32px';
-      footerDiv.style.paddingTop = '24px';
-      footerDiv.style.borderTop = '1px solid #e5e7eb';
-      footerDiv.style.textAlign = 'center';
-      footerDiv.style.color = '#9ca3af';
-      footerDiv.style.fontSize = '10px';
-      footerDiv.innerHTML = `
-        <div>Dibuat pada ${new Date().toLocaleDateString('id-ID', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        })}</div>
-        <div style="margin-top: 4px;">by KOMPOSISIKU</div>
-      `;
-
-      // Create all content divs
-      let recDiv: HTMLDivElement | null = null;
-      let sourcesDivElement: HTMLDivElement | null = null;
 
       // Recommendations section
       if (searchResult.saran && searchResult.saran.length > 0) {
-        recDiv = document.createElement('div');
-        recDiv.style.background = 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)';
-        recDiv.style.padding = '20px';
-        recDiv.style.borderRadius = '12px';
-        recDiv.style.border = '1px solid #bfdbfe';
-        recDiv.style.marginBottom = '24px';
+        y += 25;
+        ctx.fillStyle = '#1e40af';
+        ctx.font = 'bold 15px Arial';
+        ctx.fillText('Saran Pemilihan', padding, y);
+        y += 20;
 
-        const recTitle = document.createElement('h4');
-        recTitle.style.fontSize = '16px';
-        recTitle.style.fontWeight = '600';
-        recTitle.style.color = '#1e40af';
-        recTitle.style.marginBottom = '12px';
-        recTitle.textContent = 'Saran Pemilihan';
-
-        const recList = document.createElement('ul');
-        recList.style.listStyle = 'none';
-        recList.style.padding = '0';
-        recList.style.margin = '0';
-
+        ctx.fillStyle = '#1e40af';
+        ctx.font = '12px Arial';
         searchResult.saran.forEach(item => {
-          const li = document.createElement('li');
-          li.style.display = 'flex';
-          li.style.alignItems = 'flex-start';
-          li.style.marginBottom = '6px';
-
-          const bullet = document.createElement('span');
-          bullet.style.width = '6px';
-          bullet.style.height = '6px';
-          bullet.style.backgroundColor = '#3b82f6';
-          bullet.style.borderRadius = '50%';
-          bullet.style.marginTop = '6px';
-          bullet.style.marginRight = '12px';
-          bullet.style.flexShrink = '0';
-
-          const text = document.createElement('span');
-          text.style.color = '#1e40af';
-          text.style.fontSize = '13px';
-          text.textContent = item;
-
-          li.appendChild(bullet);
-          li.appendChild(text);
-          recList.appendChild(li);
+          const itemLines = wrapText(ctx, '• ' + item, contentWidth - 20, 14);
+          itemLines.forEach(line => {
+            ctx.fillText(line, padding + 10, y);
+            y += 16;
+          });
         });
-
-        recDiv.appendChild(recTitle);
-        recDiv.appendChild(recList);
       }
 
       // Sources section
       if (searchResult.sources && searchResult.sources.length > 0) {
-        sourcesDivElement = document.createElement('div');
-        sourcesDivElement.style.marginTop = '24px';
-        sourcesDivElement.style.paddingTop = '24px';
-        sourcesDivElement.style.borderTop = '1px solid #e5e7eb';
+        y += 25;
+        ctx.fillStyle = '#111827';
+        ctx.font = 'bold 15px Arial';
+        ctx.fillText('Sumber Referensi', padding, y);
+        y += 20;
 
-        const sourcesTitle = document.createElement('h4');
-        sourcesTitle.style.fontSize = '16px';
-        sourcesTitle.style.fontWeight = '600';
-        sourcesTitle.style.color = '#111827';
-        sourcesTitle.style.marginBottom = '12px';
-        sourcesTitle.textContent = 'Sumber Referensi';
-
-        const sourcesList = document.createElement('div');
-        sourcesList.style.display = 'grid';
-        sourcesList.style.gap = '6px';
-
+        ctx.fillStyle = '#4338ca';
+        ctx.font = '11px Arial';
         searchResult.sources.forEach(source => {
-          const sourceDiv = document.createElement('div');
-          sourceDiv.style.display = 'flex';
-          sourceDiv.style.alignItems = 'center';
-          sourceDiv.style.padding = '8px';
-          sourceDiv.style.background = 'linear-gradient(90deg, #f3f4f6 0%, #e0e7ff 100%)';
-          sourceDiv.style.borderRadius = '6px';
-
-          const sourceText = document.createElement('span');
-          sourceText.style.color = '#4338ca';
-          sourceText.style.fontSize = '11px';
-          sourceText.style.wordBreak = 'break-all';
-          sourceText.textContent = source;
-
-          sourceDiv.appendChild(sourceText);
-          sourcesList.appendChild(sourceDiv);
+          const sourceLines = wrapText(ctx, source, contentWidth - 30, 13);
+          sourceLines.forEach(line => {
+            ctx.fillText(line, padding + 10, y);
+            y += 15;
+          });
+          y += 5;
         });
-
-        sourcesDivElement.appendChild(sourcesTitle);
-        sourcesDivElement.appendChild(sourcesList);
       }
 
-      // Append all content in correct order
-      contentDiv.appendChild(headerDiv);
-      contentDiv.appendChild(alternativesDiv);
-      if (recDiv) contentDiv.appendChild(recDiv);
-      if (sourcesDivElement) contentDiv.appendChild(sourcesDivElement);
-      contentDiv.appendChild(footerDiv);
+      // Footer
+      y += 30;
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '9px Arial';
+      ctx.textAlign = 'center';
+      const footerText = `Dibuat pada ${new Date().toLocaleDateString('id-ID', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })}`;
+      ctx.fillText(footerText, width / 2, y);
+      y += 12;
+      ctx.fillText('by KOMPOSISIKU', width / 2, y);
 
-      tempDiv.appendChild(contentDiv);
+      // Crop canvas to actual content height
+      const finalCanvas = document.createElement('canvas');
+      const finalCtx = finalCanvas.getContext('2d')!;
+      finalCanvas.width = width;
+      finalCanvas.height = y + padding;
 
-      document.body.appendChild(tempDiv);
+      finalCtx.drawImage(canvas, 0, 0, width, y + padding, 0, 0, width, y + padding);
 
-      try {
-        tempDiv.style.visibility = 'visible';
-        await new Promise(resolve => setTimeout(resolve, 100));
+      const dataUrl = finalCanvas.toDataURL('image/png', 1.0);
 
-        const dataUrl = await toPng(tempDiv, {
-          backgroundColor: '#ffffff',
-          quality: 1,
-          cacheBust: true,
-          pixelRatio: 4,
-          width: tempDiv.offsetWidth,
-          height: tempDiv.offsetHeight
-        });
+      if (navigator.share) {
+        try {
+          const response = await fetch(dataUrl);
+          const blob = await response.blob();
+          const file = new File([blob], `alternatif-${searchResult.originalProduct}-details.png`, { type: 'image/png' });
 
-        if (navigator.share) {
-          try {
-            const response = await fetch(dataUrl);
-            const blob = await response.blob();
-            const file = new File([blob], `alternatif-${searchResult.originalProduct}-details.png`, { type: 'image/png' });
-
-            await navigator.share({
-              files: [file],
-              title: `Alternatif Produk: ${searchResult.originalProduct}`,
-              text: `Alternatif produk untuk: ${searchResult.originalProduct}`,
-            });
-            return;
-          } catch (shareError) {
-            console.log('Native sharing failed, falling back to download', shareError);
-          }
-        }
-
-        const link = document.createElement('a');
-        link.download = `alternatif-${searchResult.originalProduct}-details.png`;
-        link.href = dataUrl;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-      } catch (error) {
-        console.error('Error generating image:', error);
-        alert('Failed to generate image. Please try again.');
-      } finally {
-        if (document.body.contains(tempDiv)) {
-          document.body.removeChild(tempDiv);
+          await navigator.share({
+            files: [file],
+            title: `Alternatif Produk: ${searchResult.originalProduct}`,
+            text: `Alternatif produk untuk: ${searchResult.originalProduct}`,
+          });
+          return;
+        } catch (shareError) {
+          console.log('Native sharing failed, falling back to download', shareError);
         }
       }
+
+      const link = document.createElement('a');
+      link.download = `alternatif-${searchResult.originalProduct}-details.png`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
     } catch (error) {
-      console.error('Error exporting to PNG:', error);
-      alert('Maaf, terjadi kesalahan saat mengexport gambar. Silakan coba lagi atau gunakan screenshot manual.');
+      console.error('Error generating image:', error);
+      alert('Failed to generate image. Please try again.');
     }
+  };
+
+  // Helper function to wrap text
+  const wrapText = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number, lineHeight: number): string[] => {
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    words.forEach(word => {
+      const testLine = currentLine + (currentLine ? ' ' : '') + word;
+      const metrics = ctx.measureText(testLine);
+
+      if (metrics.width > maxWidth && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    });
+
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    return lines;
   };
 
   const exportToPDF = async () => {
@@ -505,14 +405,7 @@ export default function CariAlternatif() {
       altTitleDiv.style.alignItems = 'center';
       altTitleDiv.style.marginBottom = '16px';
 
-      const altTitle = document.createElement('h4');
-      altTitle.style.fontSize = '18px';
-      altTitle.style.fontWeight = '600';
-      altTitle.style.color = '#111827';
-      altTitle.textContent = 'Alternatif Produk';
-
-      altTitleDiv.appendChild(altTitle);
-      alternativesDiv.appendChild(altTitleDiv);
+      // Title removed as requested
 
       searchResult.alternatives.forEach((alt, index) => {
         const altItemDiv = document.createElement('div');
@@ -536,10 +429,12 @@ export default function CariAlternatif() {
         altName.style.marginBottom = '4px';
         altName.textContent = alt.nama;
 
-        const altDetails = document.createElement('p');
-        altDetails.style.fontSize = '14px';
-        altDetails.style.color = '#6b7280';
-        altDetails.innerHTML = `<strong>Merek: ${alt.merek}</strong> | Kategori: ${alt.kategori}`;
+        const altBrand = document.createElement('p');
+        altBrand.style.fontSize = '14px';
+        altBrand.style.fontWeight = '600';
+        altBrand.style.color = '#374151';
+        altBrand.style.marginBottom = '4px';
+        altBrand.textContent = `Merk : ${alt.merek}`;
 
         const altPrice = document.createElement('span');
         altPrice.style.padding = '4px 12px';
@@ -556,10 +451,13 @@ export default function CariAlternatif() {
           altPrice.style.backgroundColor = '#fee2e2';
           altPrice.style.color = '#991b1b';
         }
-        altPrice.textContent = `Harga ${alt.harga}`;
+        const priceLabel = alt.harga === 'murah' ? 'Lebih Murah' :
+                          alt.harga === 'sedang' ? 'Harga Sama' :
+                          'Lebih Mahal';
+        altPrice.textContent = priceLabel;
 
+        altInfo.appendChild(altBrand);
         altInfo.appendChild(altName);
-        altInfo.appendChild(altDetails);
         altHeader.appendChild(altInfo);
         altHeader.appendChild(altPrice);
         altItemDiv.appendChild(altHeader);
@@ -868,21 +766,23 @@ export default function CariAlternatif() {
                   <div className="space-y-6">
                     {searchResult.alternatives.map((alt, index) => (
                       <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-600 p-6">
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start items-center mb-4">
+                          <div className="flex-1 text-center sm:text-left">
+                            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                              Merk : {alt.merek}
+                            </p>
                             <h5 className="text-xl font-semibold text-gray-900 dark:text-white">
                               {alt.nama}
                             </h5>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                              <span className="font-bold">Merek: {alt.merek}</span> | Kategori: {alt.kategori}
-                            </p>
                           </div>
                           <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                             alt.harga === 'murah' ? 'bg-green-100 text-green-800' :
                             alt.harga === 'sedang' ? 'bg-yellow-100 text-yellow-800' :
                             'bg-red-100 text-red-800'
                           }`}>
-                            Harga {alt.harga}
+                            {alt.harga === 'murah' ? 'Lebih Murah' :
+                             alt.harga === 'sedang' ? 'Harga Sama' :
+                             'Lebih Mahal'}
                           </span>
                         </div>
 
@@ -947,12 +847,12 @@ export default function CariAlternatif() {
                           href={source}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30 transition-all duration-200 border border-blue-200 dark:border-blue-800"
+                          className="flex items-start sm:items-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30 transition-all duration-200 border border-blue-200 dark:border-blue-800"
                         >
-                          <svg className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                           </svg>
-                          <span className="text-blue-700 dark:text-blue-300 text-sm truncate">{source}</span>
+                          <span className="text-blue-700 dark:text-blue-300 text-sm break-all sm:break-words">{source}</span>
                         </a>
                       ))}
                     </div>
