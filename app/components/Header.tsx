@@ -14,7 +14,7 @@ export default function Header() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   return (
-    <header className="w-full bg-white border-b border-gray-200 dark:border-gray-800">
+    <header className="w-full bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-14">
           {/* Logo di kiri */}
@@ -29,7 +29,7 @@ export default function Header() {
           <div className="lg:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none"
+              className="p-2 rounded-md text-gray-600 hover:bg-gray-100 focus:outline-none"
             >
               <svg
                 className="h-6 w-6"
@@ -60,13 +60,13 @@ export default function Header() {
           <nav className="hidden lg:flex space-x-4">
             <Link
               href={isHomePage ? "/padukanproduk" : "/"}
-              className="px-4 py-2 text-sm font-medium text-[#6D28D9] dark:text-gray-300 bg-[#45D2E8] dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-[#6D28D9] bg-[#45D2E8] border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               {isHomePage ? "Padukan Produk" : "Cek Komposisi"}
             </Link>
             <Link
               href={isAlternatifPage ? "/padukanproduk" : "/carialternatif"}
-              className="px-4 py-2 text-sm font-medium text-[#6D28D9] dark:text-gray-300 bg-[#45D2E8] dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-[#6D28D9] bg-[#45D2E8] border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               {isAlternatifPage ? "Padukan Produk" : "Cek Alternatif"}
             </Link>
@@ -95,7 +95,7 @@ export default function Header() {
                 <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                   <button
                     onClick={() => {
-                      alert('Coming Soon');
+                      window.open('https://skindex-kafa.vercel.app/', '_blank');
                       setIsDropdownOpen(false);
                     }}
                     className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors flex items-center"
@@ -129,14 +129,14 @@ export default function Header() {
           <div className="lg:hidden py-4 space-y-2">
             <Link
               href={isHomePage ? "/padukanproduk" : "/"}
-              className="block px-4 py-2 text-sm font-medium text-[#6D28D9] dark:text-gray-300 bg-[#00BCD4] dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="block px-4 py-2 text-sm font-medium text-[#6D28D9] bg-[#00BCD4] border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               onClick={() => setIsMenuOpen(false)}
             >
               {isHomePage ? "Padukan Produk" : "Cek Komposisi"}
             </Link>
             <Link
               href={isAlternatifPage ? "/padukanproduk" : "/carialternatif"}
-              className="block px-4 py-2 text-sm font-medium text-[#6D28D9] dark:text-gray-300 bg-[#45D2E8] dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="block px-4 py-2 text-sm font-medium text-[#6D28D9] bg-[#45D2E8] border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               onClick={() => setIsMenuOpen(false)}
             >
               {isAlternatifPage ? "Padukan Produk" : "Cek Alternatif"}
@@ -166,7 +166,7 @@ export default function Header() {
                 <div className="mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-lg">
                   <button
                     onClick={() => {
-                      alert('Coming Soon');
+                      window.open('https://skindex-kafa.vercel.app/', '_blank');
                       setIsDropdownOpen(false);
                       setIsMenuOpen(false);
                     }}
