@@ -132,14 +132,14 @@ PENTING:
 
       if (error?.status === 429 || error?.code === 429) {
         return NextResponse.json(
-          { message: "Token Gemini Habis" },
+          { message: "Gemini sedang penuh, coba lagi dalam beberapa saat" },
           { status: 429 }
         );
       }
 
       if (error?.status === 503 || error?.code === 503) {
         return NextResponse.json(
-          { message: "AI sedang sibuk, coba beberapa saat lagi" },
+          { message: "Gemini sedang penuh, coba lagi dalam beberapa saat" },
           { status: 503 }
         );
       }
